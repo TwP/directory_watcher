@@ -1,4 +1,11 @@
+History.txt
 Manifest.txt
-Rakefile
 README.txt
+Rakefile
 lib/directory_watcher.rb
+tasks/annotations.rake
+tasks/doc.rake
+tasks/gem.rake
+tasks/manifest.rake
+tasks/rubyforge.rake
+tasks/setup.rb

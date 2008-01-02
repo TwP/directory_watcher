@@ -150,7 +150,7 @@ require 'observer'
 #
 class DirectoryWatcher
 
-  VERSION = '1.1.0'    # :nodoc:
+  VERSION = '1.1.1'    # :nodoc:
 
   # An +Event+ structure contains the _type_ of the event and the file _path_
   # to which the event pertains. The type can be one of the following:

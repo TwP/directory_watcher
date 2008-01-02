@@ -1,0 +1,4 @@
+Manifest.txt
+Rakefile
+README.txt
+lib/directory_watcher.rb

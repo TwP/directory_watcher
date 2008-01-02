@@ -1,5 +1,6 @@
 directory_watcher
     by Tim Pease
+    http://codeforpeople.rubyforge.org/directory_watcher
 
 == DESCRIPTION:
   

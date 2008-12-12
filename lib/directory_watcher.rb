@@ -150,7 +150,7 @@ require 'observer'
 #
 class DirectoryWatcher
 
-  VERSION = '1.1.1'    # :nodoc:
+  VERSION = '1.1.2'    # :nodoc:
 
   # An +Event+ structure contains the _type_ of the event and the file _path_
   # to which the event pertains. The type can be one of the following:
@@ -199,7 +199,7 @@ class DirectoryWatcher
         raise ArgumentError, "'#{@dir}' is not a directory"
       end
     else
-      Dir.create @dir
+      Dir.mkdir @dir
     end
 
     self.glob = opts[:glob] || '*'

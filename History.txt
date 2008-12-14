@@ -1,4 +1,4 @@
-== 1.1.2 / 2009-01-01
+== 1.1.2 / 2008-12-14
 
 * 1 minor bugfix
   - fixed directory creation if the watched directory did not exist

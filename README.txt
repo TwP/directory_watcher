@@ -20,7 +20,12 @@ This is a pure ruby library. There are no requirements for using this code.
 
 == INSTALL:
 
-sudo gem install directory_watcher
+  sudo gem install directory_watcher
+
+You will need have Mr Bones installed in order to develop or modify directory
+watcher.
+
+  sudo gem install bones
 
 == LICENSE:
 

@@ -161,13 +161,9 @@ class DirectoryWatcher
   #    :removed    =>  file has been removed from the directory
   #    :stable     =>  file has stabilized since being added or modified
   #
-  Event = Struct.new :type, :path
-
-  # :stopdoc:
-  class Event
+  Event = Struct.new(:type, :path) do
     def to_s( ) "#{type} '#{path}'" end
   end
-  # :startdoc:
 
   # call-seq:
   #    DirectoryWatcher.new( directory, options )

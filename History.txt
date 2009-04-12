@@ -1,3 +1,9 @@
+== 1.2.0 / 2009-04-12
+
+* 2 minor enhancements
+  - added an option to persist state to a file [Benjamin Thomas]
+  - the option to run the directory watcher scanner manually
+
 == 1.1.2 / 2008-12-14
 
 * 1 minor bugfix

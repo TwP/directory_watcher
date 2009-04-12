@@ -7,8 +7,8 @@
 announcement.txt
 coverage
 doc
-examples/*/output
 pkg
 tags
 temp.dir
 tmp.rb
+tmp.yml

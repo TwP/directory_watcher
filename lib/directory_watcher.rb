@@ -5,6 +5,7 @@
 #
 
 require 'observer'
+require 'yaml'
 
 # == Synopsis
 #
@@ -132,6 +133,40 @@ require 'observer'
 #    gets      # when the user hits "enter" the script will terminate
 #    dw.stop
 #
+# === Persisting State
+#
+# A directory watcher can be configured to persist its current state to a
+# file when it is stopped and to load state from that same file when it
+# starts. Setting the +persist+ value to a filename will enable this
+# feature.
+#
+#    require 'directory_watcher'
+#
+#    dw = DirectoryWatcher.new '.', :glob => '**/*.rb'
+#    dw.interval = 5.0
+#    dw.persist = "dw_state.yml"
+#    dw.add_observer {|*args| args.each {|event| puts event}}
+#
+#    dw.start  # loads state from dw_state.yml
+#    gets      # when the user hits "enter" the script will terminate
+#    dw.stop   # stores state to dw_state.yml
+#
+# === Running Once
+#
+# Instead of using the built in run loop, the directory watcher can be run
+# one or many times using the +run_once+ method. The state of the directory
+# watcher can be loaded and dumped if so desired.
+#
+#    dw = DirectoryWatcher.new '.', :glob => '**/*.rb'
+#    dw.persist = "dw_state.yml"
+#    dw.add_observer {|*args| args.each {|event| puts event}}
+#
+#    dw.load!       # loads state from dw_state.yml
+#    dw.run_once
+#    sleep 5.0
+#    dw.run_once
+#    dw.persist!    # stores state to dw_state.yml
+#
 # == Contact
 #
 # A lot of discussion happens about Ruby in general on the ruby-talk
@@ -150,7 +185,7 @@ require 'observer'
 #
 class DirectoryWatcher
 
-  VERSION = '1.1.2'    # :nodoc:
+  VERSION = '1.2.0'    # :nodoc:
 
   # An +Event+ structure contains the _type_ of the event and the file _path_
   # to which the event pertains. The type can be one of the following:
@@ -164,6 +199,18 @@ class DirectoryWatcher
   Event = Struct.new(:type, :path) do
     def to_s( ) "#{type} '#{path}'" end
   end
+
+  # :stopdoc:
+  # A persistable file stat structure used internally by the directory
+  # watcher.
+  #
+  FileStat = Struct.new(:mtime, :size, :stable) do
+    def <=>( other )
+      return unless other.is_a? ::DirectoryWatcher::FileStat
+      self.mtime <=> other.mtime
+    end
+  end
+  # :startdoc:
 
   # call-seq:
   #    DirectoryWatcher.new( directory, options )
@@ -182,6 +229,9 @@ class DirectoryWatcher
   #                            round of file added events that would normally
   #                            be generated (glob pattern must also be
   #                            specified otherwise odd things will happen)
+  #    :persist   =>  file     the state will be persisted to and restored
+  #                            from the file when the directory watcher is
+  #                            stopped and started (respectively)
   #
   # The default glob pattern will scan all files in the configured directory.
   # Setting the :stable option to +nil+ will prevent stable events from being
@@ -201,6 +251,7 @@ class DirectoryWatcher
     self.glob = opts[:glob] || '*'
     self.interval = opts[:interval] || 30
     self.stable = opts[:stable] || nil
+    self.persist = opts[:persist]
 
     @files = (opts[:pre_load] ? scan_files : Hash.new)
     @events = []
@@ -275,9 +326,6 @@ class DirectoryWatcher
   end
   attr_reader :glob
 
-  # call-seq:
-  #    interval = 30.0
-  #
   # Sets the directory scan interval. The directory will be scanned every
   # _interval_ seconds for changes to files matching the glob pattern.
   # Raises +ArgumentError+ if the interval is zero or negative.
@@ -289,9 +337,6 @@ class DirectoryWatcher
   end
   attr_reader :interval
 
-  # call-seq:
-  #    stable = 2
-  #
   # Sets the number of intervals a file must remain unchanged before it is
   # considered "stable". When this condition is met, a stable event is
   # generated for the file. If stable is set to +nil+ then stable events
@@ -324,9 +369,35 @@ class DirectoryWatcher
   end
   attr_reader :stable
 
-  # call-seq:
-  #    running?
+  # Sets the name of the file to which the directory watcher state will be
+  # persisted when it is stopped. Setting the persist filename to +nil+ will
+  # disable this feature.
   #
+  def persist=( filename )
+    @persist = filename ? filename.to_s : nil
+  end
+  attr_reader :persist
+
+  # Write the current state of the directory watcher to the persist file.
+  # This method will do nothing if the directory watcher is running or if
+  # the persist file is not configured.
+  #
+  def persist!
+    return if running?
+    File.open(@persist, 'w') {|fd| fd.write YAML.dump(@files)} if @persist
+    self
+  end
+
+  # Loads the state of the directory watcher from the persist file. This
+  # method will do nothing if the directory watcher is running or if the
+  # persist file is not configured.
+  #
+  def load!
+    return if running?
+    @files = YAML.load_file(@persist) if @persist and test(?f, @persist)
+    self
+  end
+
   # Returns +true+ if the directory watcher is currently running. Returns
   # +false+ if this is not the case.
   #
@@ -334,23 +405,18 @@ class DirectoryWatcher
     !@thread.nil?
   end
 
-  # call-seq:
-  #    start
-  #
   # Start the directory watcher scanning thread. If the directory watcher is
   # already running, this method will return without taking any action.
   #
   def start
     return if running?
 
+    load!
     @stop = false
-    @thread = Thread.new(self) {|dw| dw.__send__ :run}
+    @thread = Thread.new(self) {|dw| dw.__send__ :run_loop}
     self
   end
 
-  # call-seq:
-  #    stop
-  #
   # Stop the directory watcher scanning thread. If the directory watcher is
   # already stopped, this method will return without taking any action.
   #
@@ -360,8 +426,10 @@ class DirectoryWatcher
     @stop = true
     @thread.wakeup if @thread.status == 'sleep'
     @thread.join
-    @thread = nil
     self
+  ensure
+    @thread = nil
+    persist!
   end
 
   # call-seq:
@@ -378,6 +446,7 @@ class DirectoryWatcher
     was_running = running?
 
     stop if was_running
+    File.delete(@persist) if @persist and test(?f, @persist)
     @files = (pre_load ? scan_files : Hash.new)
     start if was_running
   end
@@ -398,12 +467,28 @@ class DirectoryWatcher
     @thread.join limit
   end
 
+  # Performs exactly one scan of the directory for file changes and notifies
+  # the observers.
+  # 
+  # This method wil not persist file changes if that options is configured.
+  # The user must call persist! explicitly when using the run_once method.
+  #
+  def run_once
+    files = scan_files
+    keys = [files.keys, @files.keys]  # current files, previous files
+
+    find_added(files, *keys)
+    find_modified(files, *keys)
+    find_removed(*keys)
+
+    notify_observers
+    @files = files    # store the current file list for the next iteration
+    self
+  end
+
 
   private
 
-  # call-seq:
-  #    scan_files
-  #
   # Using the configured glob pattern, scan the directory for all files and
   # return a hash with the filenames as keys and +File::Stat+ objects as the
   # values. The +File::Stat+ objects contain the mtime and size of the file.
@@ -415,35 +500,24 @@ class DirectoryWatcher
         begin
           stat = File.stat fn
           next unless stat.file?
-          files[fn] = stat
+          files[fn] = DirectoryWatcher::FileStat.new(stat.mtime, stat.size)
         rescue SystemCallError; end
       end
     end
     files
   end
 
-  # call-seq:
-  #    run
-  #
   # Calling this method will enter the directory watcher's run loop. The
   # calling thread will not return until the +stop+ method is called.
   #
   # The run loop is responsible for scanning the directory for file changes,
   # and then dispatching events to registered listeners.
   #
-  def run
+  def run_loop
     until @stop
       start = Time.now.to_f
 
-      files = scan_files
-      keys = [files.keys, @files.keys]  # current files, previous files
-
-      find_added(files, *keys)
-      find_modified(files, *keys)
-      find_removed(*keys)
-
-      notify_observers
-      @files = files    # store the current file list for the next iteration
+      run_once
 
       nap_time = @interval - (Time.now.to_f - start)
       sleep nap_time if nap_time > 0
@@ -512,9 +586,6 @@ class DirectoryWatcher
     self
   end
 
-  # call-seq:
-  #    notify_observers
-  #
   # If there are queued files events, then invoke the update method of each
   # registered observer in turn passing the list of file events to each.
   # The file events array is cleared at the end of this method call.
@@ -529,12 +600,5 @@ class DirectoryWatcher
   end
 
 end  # class DirectoryWatcher
-
-# :stopdoc:
-# We need to add a 'stable' attribute to the File::Stat object
-class File::Stat
-  attr_accessor :stable
-end
-# :startdoc:
 
 # EOF

@@ -185,7 +185,7 @@ require 'yaml'
 #
 class DirectoryWatcher
 
-  VERSION = '1.2.0'    # :nodoc:
+  VERSION = '1.3.0'    # :nodoc:
 
   # An +Event+ structure contains the _type_ of the event and the file _path_
   # to which the event pertains. The type can be one of the following:
@@ -206,7 +206,7 @@ class DirectoryWatcher
   #
   FileStat = Struct.new(:mtime, :size, :stable) do
     def <=>( other )
-      return unless other.is_a? ::DirectoryWatcher::FileStat
+      return unless other.respond_to? :mtime
       self.mtime <=> other.mtime
     end
   end
@@ -239,6 +239,7 @@ class DirectoryWatcher
   #
   def initialize( directory, opts = {} )
     @dir = directory
+    @observer_peers = {}
 
     if Kernel.test(?e, @dir)
       unless Kernel.test(?d, @dir)
@@ -248,15 +249,16 @@ class DirectoryWatcher
       Dir.mkdir @dir
     end
 
+    @scanner = ::DirectoryWatcher::Scanner.new { |events|
+      notify_observers(events)
+    }
+
     self.glob = opts[:glob] || '*'
     self.interval = opts[:interval] || 30
     self.stable = opts[:stable] || nil
     self.persist = opts[:persist]
 
-    @files = (opts[:pre_load] ? scan_files : Hash.new)
-    @events = []
-    @thread = nil
-    @observer_peers = {}
+    @scanner.reset opts[:pre_load]
   end
 
   # call-seq:
@@ -314,15 +316,15 @@ class DirectoryWatcher
   # files. A single glob pattern can be given or an array of glob patterns.
   #
   def glob=( val )
-    @glob = case val
-            when String; [File.join(@dir, val)]
-            when Array; val.flatten.map! {|g| File.join(@dir, g)}
-            else
-              raise(ArgumentError,
-                    'expecting a glob pattern or an array of glob patterns')
-            end
-    @glob.uniq!
-    val
+    glob = case val
+           when String; [File.join(@dir, val)]
+           when Array; val.flatten.map! {|g| File.join(@dir, g)}
+           else
+             raise(ArgumentError,
+                   'expecting a glob pattern or an array of glob patterns')
+           end
+    glob.uniq!
+    @scanner.glob = glob
   end
   attr_reader :glob
 
@@ -333,9 +335,14 @@ class DirectoryWatcher
   def interval=( val )
     val = Float(val)
     raise ArgumentError, "interval must be greater than zero" if val <= 0
-    @interval = Float(val)
+    @scanner.interval = Float(val)
   end
-  attr_reader :interval
+
+  # Returns the directory scan interval in seconds.
+  #
+  def interval
+    @scanner.interval
+  end
 
   # Sets the number of intervals a file must remain unchanged before it is
   # considered "stable". When this condition is met, a stable event is
@@ -359,15 +366,21 @@ class DirectoryWatcher
   #
   def stable=( val )
     if val.nil?
-      @stable = nil
+      @scanner.stable = nil
       return
     end
 
     val = Integer(val)
     raise ArgumentError, "stable must be greater than zero" if val <= 0
-    @stable = val
+    @scanner.stable = val
   end
-  attr_reader :stable
+
+  # Returs the number of intervals a file must remain unchanged before it is
+  # considered "stable".
+  #
+  def stable
+    @scanner.stable
+  end
 
   # Sets the name of the file to which the directory watcher state will be
   # persisted when it is stopped. Setting the persist filename to +nil+ will
@@ -384,7 +397,7 @@ class DirectoryWatcher
   #
   def persist!
     return if running?
-    File.open(@persist, 'w') {|fd| fd.write YAML.dump(@files)} if @persist
+    File.open(@persist, 'w') {|fd| fd.write YAML.dump(@scanner.files)} if @persist
     self
   end
 
@@ -394,7 +407,7 @@ class DirectoryWatcher
   #
   def load!
     return if running?
-    @files = YAML.load_file(@persist) if @persist and test(?f, @persist)
+    @scanner.files = YAML.load_file(@persist) if @persist and test(?f, @persist)
     self
   end
 
@@ -402,7 +415,7 @@ class DirectoryWatcher
   # +false+ if this is not the case.
   #
   def running?
-    !@thread.nil?
+    @scanner.running?
   end
 
   # Start the directory watcher scanning thread. If the directory watcher is
@@ -412,8 +425,7 @@ class DirectoryWatcher
     return if running?
 
     load!
-    @stop = false
-    @thread = Thread.new(self) {|dw| dw.__send__ :run_loop}
+    @scanner.start
     self
   end
 
@@ -423,12 +435,9 @@ class DirectoryWatcher
   def stop
     return unless running?
 
-    @stop = true
-    @thread.wakeup if @thread.status == 'sleep'
-    @thread.join
+    @scanner.stop
     self
   ensure
-    @thread = nil
     persist!
   end
 
@@ -443,11 +452,11 @@ class DirectoryWatcher
   # generated.
   #
   def reset( pre_load = false )
-    was_running = running?
+    was_running = @scanner.running?
 
     stop if was_running
     File.delete(@persist) if @persist and test(?f, @persist)
-    @files = (pre_load ? scan_files : Hash.new)
+    @scanner.reset pre_load
     start if was_running
   end
 
@@ -463,142 +472,36 @@ class DirectoryWatcher
   # with +nil+.
   #
   def join( limit = nil )
-    return unless running?
-    @thread.join limit
+    @scanner.join limit
   end
 
   # Performs exactly one scan of the directory for file changes and notifies
   # the observers.
-  # 
-  # This method wil not persist file changes if that options is configured.
-  # The user must call persist! explicitly when using the run_once method.
   #
   def run_once
-    files = scan_files
-    keys = [files.keys, @files.keys]  # current files, previous files
-
-    find_added(files, *keys)
-    find_modified(files, *keys)
-    find_removed(*keys)
-
-    notify_observers
-    @files = files    # store the current file list for the next iteration
+    @scanner.run_once
     self
   end
 
 
   private
 
-  # Using the configured glob pattern, scan the directory for all files and
-  # return a hash with the filenames as keys and +File::Stat+ objects as the
-  # values. The +File::Stat+ objects contain the mtime and size of the file.
+  # Invoke the update method of each registered observer in turn passing the
+  # list of file events to each.
   #
-  def scan_files
-    files = {}
-    @glob.each do |glob|
-      Dir.glob(glob).each do |fn|
-        begin
-          stat = File.stat fn
-          next unless stat.file?
-          files[fn] = DirectoryWatcher::FileStat.new(stat.mtime, stat.size)
-        rescue SystemCallError; end
-      end
-    end
-    files
-  end
-
-  # Calling this method will enter the directory watcher's run loop. The
-  # calling thread will not return until the +stop+ method is called.
-  #
-  # The run loop is responsible for scanning the directory for file changes,
-  # and then dispatching events to registered listeners.
-  #
-  def run_loop
-    until @stop
-      start = Time.now.to_f
-
-      run_once
-
-      nap_time = @interval - (Time.now.to_f - start)
-      sleep nap_time if nap_time > 0
-    end
-  end
-
-  # call-seq:
-  #    find_added( files, cur, prev )
-  #
-  # Taking the list of current files, _cur_, and the list of files found
-  # previously, _prev_, figure out which files have been added and generate
-  # a new file added event for each.
-  #
-  def find_added( files, cur, prev )
-    added = cur - prev
-    added.each do |fn|
-      files[fn].stable = @stable
-      @events << Event.new(:added, fn)
-    end
-    self
-  end
-
-  # call-seq:
-  #    find_removed( cur, prev )
-  #
-  # Taking the list of current files, _cur_, and the list of files found
-  # previously, _prev_, figure out which files have been removed and
-  # generate a new file removed event for each.
-  #
-  def find_removed( cur, prev )
-    removed = prev - cur
-    removed.each {|fn| @events << Event.new(:removed, fn)}
-    self
-  end
-
-  # call-seq:
-  #    find_modified( files, cur, prev )
-  #
-  # Taking the list of current files, _cur_, and the list of files found
-  # previously, _prev_, find those that are common between them and determine
-  # if any have been modified. Generate a new file modified event for each
-  # modified file. Also, by looking at the stable count in the _files_ hash,
-  # figure out if any files have become stable since being added or modified.
-  # Generate a new stable event for each stabilized file.
-  #
-  def find_modified( files, cur, prev )
-    (cur & prev).each do |key|
-      cur_stat, prev_stat = files[key], @files[key]
-
-      # if the modification time or the file size differs from the last
-      # time it was seen, then create a :modified event
-      if (cur_stat <=> prev_stat) != 0 or cur_stat.size != prev_stat.size
-        @events << Event.new(:modified, key)
-        cur_stat.stable = @stable
-
-      # otherwise, if the count is not nil see if we need to create a
-      # :stable event
-      elsif !prev_stat.stable.nil?
-        cur_stat.stable = prev_stat.stable - 1
-        if cur_stat.stable == 0
-          @events << Event.new(:stable, key)
-          cur_stat.stable = nil
-        end
-      end
-    end
-    self
-  end
-
-  # If there are queued files events, then invoke the update method of each
-  # registered observer in turn passing the list of file events to each.
-  # The file events array is cleared at the end of this method call.
-  #
-  def notify_observers
-    unless @events.empty?
-      @observer_peers.each do |observer, func|
-        begin; observer.send(func, *@events); rescue Exception; end
-      end
-      @events.clear
+  def notify_observers( events )
+    @observer_peers.each do |observer, func|
+      begin; observer.send(func, *events); rescue Exception; end
     end
   end
 
 end  # class DirectoryWatcher
+
+begin
+  $:.unshift(File.expand_path(File.dirname(__FILE__)))
+  require 'directory_watcher/scanner'
+ensure
+  $:.shift
+end
 
 # EOF

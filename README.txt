@@ -1,4 +1,4 @@
-directory_watcher
+Directory Watcher
     by Tim Pease
     http://codeforpeople.rubyforge.org/directory_watcher
 
@@ -27,10 +27,18 @@ watcher.
 
   sudo gem install bones
 
+== NOTES:
+
+The support for EventMachine based file notifications is fairly new and
+experimental. Please feel free to experiment and report any issues on the
+github issue tracker.
+
+  http://github.com/TwP/directory_watcher/issues
+
 == LICENSE:
 
 MIT License
-Copyright (c) 2007 - 2008
+Copyright (c) 2007 - 2009
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the

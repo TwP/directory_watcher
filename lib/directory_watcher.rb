@@ -232,6 +232,9 @@ class DirectoryWatcher
   #    :persist   =>  file     the state will be persisted to and restored
   #                            from the file when the directory watcher is
   #                            stopped and started (respectively)
+  #    :scanner   =>  nil      the directory scanning strategy to use with
+  #                            the directory watcher (either :eventmachine
+  #                            or nil)
   #
   # The default glob pattern will scan all files in the configured directory.
   # Setting the :stable option to +nil+ will prevent stable events from being
@@ -249,7 +252,15 @@ class DirectoryWatcher
       Dir.mkdir @dir
     end
 
-    @scanner = ::DirectoryWatcher::Scanner.new { |events|
+    @scanner = case opts[:scanner]
+    when :eventmachine, :em
+      break unless HAVE_EM
+      ::DirectoryWatcher::EmScanner.new {|events| notify_observers(events)}
+    when :rev, :ev
+      nil
+    else nil end
+
+    @scanner ||= ::DirectoryWatcher::Scanner.new {|events|
       notify_observers(events)
     }
 
@@ -498,11 +509,11 @@ class DirectoryWatcher
 end  # class DirectoryWatcher
 
 begin
-  $:.unshift(File.expand_path(File.dirname(__FILE__)))
+  $LOAD_PATH.unshift(File.expand_path(File.dirname(__FILE__)))
   require 'directory_watcher/scanner'
   require 'directory_watcher/em_scanner'
 ensure
-  $:.shift
+  $LOAD_PATH.shift
 end
 
 # EOF

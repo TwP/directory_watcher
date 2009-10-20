@@ -1,4 +1,14 @@
 
+# The Scanner is responsible for polling the watched directory at a regular
+# interval and generating events when files are modified, added or removed.
+# These events are passed to the DirectoryWatcher which notifies the
+# registered observers.
+#
+# The Scanner is a pure Ruby class, and as such it works across all Ruby
+# interpreters on the major platforms. This also means that it can be
+# processor intensive for large numbers of files or very fast update
+# intervals. Your mileage will vary, but it is something to keep an eye on.
+#
 class DirectoryWatcher::Scanner
 
   attr_accessor :glob
@@ -6,7 +16,11 @@ class DirectoryWatcher::Scanner
   attr_accessor :stable
   attr_accessor :files
 
+  # call-seq:
+  #    Scanner.new { |events| block }
   #
+  # Create a thread-based scanner that will generate file events and pass
+  # those events (as an array) to the given _block_.
   #
   def initialize( &block )
     @events = []

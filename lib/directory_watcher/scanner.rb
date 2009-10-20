@@ -181,7 +181,7 @@ class DirectoryWatcher::Scanner
       # :stable event
       elsif !prev_stat.stable.nil?
         cur_stat.stable = prev_stat.stable - 1
-        if cur_stat.stable == 0
+        if cur_stat.stable <= 0
           @events << ::DirectoryWatcher::Event.new(:stable, key)
           cur_stat.stable = nil
         end

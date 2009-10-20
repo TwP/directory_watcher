@@ -500,6 +500,7 @@ end  # class DirectoryWatcher
 begin
   $:.unshift(File.expand_path(File.dirname(__FILE__)))
   require 'directory_watcher/scanner'
+  require 'directory_watcher/em_scanner'
 ensure
   $:.shift
 end

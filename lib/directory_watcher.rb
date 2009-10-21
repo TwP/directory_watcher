@@ -57,7 +57,7 @@ require 'yaml'
 # *stable* event. This event is generated after a file has been added or
 # modified and then remains unchanged for a certain number of scan
 # intervals.
-# 
+#
 # To enable the generation of this event the +stable+ count must be
 # configured. This is the number of scan intervals a file must remain
 # unchanged (based modification time and file size) before it is considered
@@ -167,18 +167,44 @@ require 'yaml'
 #    dw.run_once
 #    dw.persist!    # stores state to dw_state.yml
 #
+# === Scanning Strategies
+#
+# By default DirectoryWatcher uses a thread that scans the directory being
+# watched for files and calls "stat" on each file. The stat information is
+# used to determine which files have been modified, added, removed, etc.
+# This approach is fairly intensive for short intervals and/or directories
+# with many files.
+#
+# DirectoryWatcher supports using Rev () or EventMachine () instead of a
+# busy polling thread. These libraries use system level kernel hooks to
+# receive notifications of file system changes. This makes DirectoryWorker
+# much more efficient.
+#
+# This example will use Rev to generate file notifications.
+#
+#    dw = DirectoryWatcher.new '.', :glob => '**/*.rb', :scanner => :rev
+#    dw.add_observer {|*args| args.each {|event| puts event}}
+#
+#    dw.start
+#    gets      # when the user hits "enter" the script will terminate
+#    dw.stop
+#
+# The scanner cannot be changed after the DirectoryWatcher has been
+# created. To use an EventMachine scanner, pass :em as the :scanner
+# option.
+#
 # == Contact
 #
 # A lot of discussion happens about Ruby in general on the ruby-talk
 # mailing list (http://www.ruby-lang.org/en/ml.html), and you can ask
 # any questions you might have there. I monitor the list, as do many
 # other helpful Rubyists, and you're sure to get a quick answer. Of
-# course, you're also welcome to email me (Tim Pease) directly at the 
+# course, you're also welcome to email me (Tim Pease) directly at the
 # at tim.pease@gmail.com, and I'll do my best to help you out.
-# 
+#
 # (the above paragraph was blatantly stolen from Nathaniel Talbott's
 # Test::Unit documentation)
-# 
+#
 # == Author
 #
 # Tim Pease
@@ -196,21 +222,21 @@ class DirectoryWatcher
   #    :removed    =>  file has been removed from the directory
   #    :stable     =>  file has stabilized since being added or modified
   #
-  Event = Struct.new(:type, :path) do
+  Event = Struct.new(:type, :path) {
     def to_s( ) "#{type} '#{path}'" end
-  end
+  }
 
   # :stopdoc:
   # A persistable file stat structure used internally by the directory
   # watcher.
   #
-  FileStat = Struct.new(:mtime, :size, :stable) do
+  FileStat = Struct.new(:mtime, :size, :stable) {
     def eql?( other )
       return false unless other.instance_of? FileStat
       self.mtime == other.mtime and self.size == other.size
     end
     alias :== :eql?
-  end
+  }
   # :startdoc:
 
   # call-seq:

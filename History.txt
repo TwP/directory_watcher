@@ -1,4 +1,4 @@
-== 1.3.0 / 2009-10-
+== 1.3.0 / 2009-10-21
 
 * 2 major enhancements
   - added support for Rev based notifications

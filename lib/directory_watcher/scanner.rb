@@ -35,7 +35,7 @@ class DirectoryWatcher::Scanner
     !@thread.nil?
   end
 
-  # Start the scanner thread. If the scanneris already running, this method
+  # Start the scanner thread. If the scanner is already running, this method
   # will return without taking any action.
   #
   def start
@@ -125,6 +125,18 @@ class DirectoryWatcher::Scanner
     files
   end
 
+  # Using the configured glob pattern, scan the directory for all files and
+  # return an array of the filenames found.
+  #
+  def list_files
+    files = []
+    @glob.each do |glob|
+      Dir.glob(glob).each {|fn| files << fn if test ?f, fn}
+    end
+    files
+  end
+
+
   # Calling this method will enter the scanner's run loop. The
   # calling thread will not return until the +stop+ method is called.
   #
@@ -187,7 +199,7 @@ class DirectoryWatcher::Scanner
 
       # if the modification time or the file size differs from the last
       # time it was seen, then create a :modified event
-      if (cur_stat <=> prev_stat) != 0 or cur_stat.size != prev_stat.size
+      if cur_stat != prev_stat
         @events << ::DirectoryWatcher::Event.new(:modified, key)
         cur_stat.stable = @stable
 

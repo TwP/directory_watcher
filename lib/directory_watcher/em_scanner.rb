@@ -92,6 +92,8 @@ class DirectoryWatcher::EmScanner < ::DirectoryWatcher::Scanner
 
     @watchers.each_value {|w| w.stop_watching if w.active?}
     @watchers.clear
+
+    notify
   end
 
   # call-seq:
@@ -132,17 +134,6 @@ class DirectoryWatcher::EmScanner < ::DirectoryWatcher::Scanner
 
   private
 
-  # Using the configured glob pattern, scan the directory for all files and
-  # return an array of the filenames found.
-  #
-  def _list_files
-    files = []
-    @glob.each do |glob|
-      Dir.glob(glob).each {|fn| files << fn if test ?f, fn}
-    end
-    files
-  end
-
   # EventMachine cannot notify us when new files are added to the watched
   # directory. The event loop will run at the configured interval and look
   # for files that have been added or files that have become stable.
@@ -165,12 +156,11 @@ class DirectoryWatcher::EmScanner < ::DirectoryWatcher::Scanner
   # events for those newly found files.
   #
   def _find_added
-    cur = _list_files
+    cur = list_files
     prev = @files.keys
     added = cur - prev
 
     added.each do |fn|
-      stat = File.stat fn
       @files[fn] = _watch_file(fn).stat
       @events << ::DirectoryWatcher::Event.new(:added, fn)
     end

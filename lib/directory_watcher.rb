@@ -205,10 +205,11 @@ class DirectoryWatcher
   # watcher.
   #
   FileStat = Struct.new(:mtime, :size, :stable) do
-    def <=>( other )
-      return unless other.respond_to? :mtime
-      self.mtime <=> other.mtime
+    def eql?( other )
+      return false unless other.instance_of? FileStat
+      self.mtime == other.mtime and self.size == other.size
     end
+    alias :== :eql?
   end
   # :startdoc:
 
@@ -233,8 +234,7 @@ class DirectoryWatcher
   #                            from the file when the directory watcher is
   #                            stopped and started (respectively)
   #    :scanner   =>  nil      the directory scanning strategy to use with
-  #                            the directory watcher (either :eventmachine
-  #                            or nil)
+  #                            the directory watcher (either :em :rev or nil)
   #
   # The default glob pattern will scan all files in the configured directory.
   # Setting the :stable option to +nil+ will prevent stable events from being
@@ -252,17 +252,9 @@ class DirectoryWatcher
       Dir.mkdir @dir
     end
 
-    @scanner = case opts[:scanner]
-    when :eventmachine, :em
-      break unless HAVE_EM
-      ::DirectoryWatcher::EmScanner.new {|events| notify_observers(events)}
-    when :rev, :ev
-      nil
-    else nil end
-
-    @scanner ||= ::DirectoryWatcher::Scanner.new {|events|
-      notify_observers(events)
-    }
+    klass = opts[:scanner].to_s.capitalize + 'Scanner'
+    klass = DirectoryWatcher.const_get klass rescue Scanner
+    @scanner = klass.new {|events| notify_observers(events)}
 
     self.glob = opts[:glob] || '*'
     self.interval = opts[:interval] || 30
@@ -512,6 +504,7 @@ begin
   $LOAD_PATH.unshift(File.expand_path(File.dirname(__FILE__)))
   require 'directory_watcher/scanner'
   require 'directory_watcher/em_scanner'
+  require 'directory_watcher/rev_scanner'
 ensure
   $LOAD_PATH.shift
 end

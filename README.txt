@@ -35,6 +35,9 @@ github issue tracker.
 
   http://github.com/TwP/directory_watcher/issues
 
+The support for Rev based file notifications is also fairly new and subject to
+the same disclaimer as the EventMachine functionality.
+
 == LICENSE:
 
 MIT License

@@ -57,9 +57,6 @@ class DirectoryWatcher::RevScanner < ::DirectoryWatcher::Scanner
   def stop
     return unless running?
 
-    @thread._rev_loop.stop rescue nil
-    @thread = nil
-
     @timer.detach
     @timer = nil
 
@@ -67,6 +64,10 @@ class DirectoryWatcher::RevScanner < ::DirectoryWatcher::Scanner
     @watchers.clear
 
     notify
+
+    @thread._rev_loop.stop rescue nil
+    @thread.kill    # for some reason the rev loop is not returning after stopping
+    @thread = nil
   end
 
   # :stopdoc:

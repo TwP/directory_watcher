@@ -451,7 +451,7 @@ class DirectoryWatcher
   # already running, this method will return without taking any action.
   #
   def start
-    return if running?
+    return self if running?
 
     load!
     @scanner.start
@@ -462,7 +462,7 @@ class DirectoryWatcher
   # already stopped, this method will return without taking any action.
   #
   def stop
-    return unless running?
+    return self unless running?
 
     @scanner.stop
     self
@@ -487,6 +487,7 @@ class DirectoryWatcher
     File.delete(@persist) if @persist and test(?f, @persist)
     @scanner.reset pre_load
     start if was_running
+    self
   end
 
   # call-seq:

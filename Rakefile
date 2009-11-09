@@ -1,27 +1,25 @@
 
 begin
   require 'bones'
-  Bones.setup
 rescue LoadError
-  begin; load 'tasks/setup.rb'
-  rescue LoadError; abort '### please install the "bones" gem ###'; end
+  abort '### please install the "bones" gem ###'
 end
 
 ensure_in_path 'lib'
 require 'directory_watcher'
 
-task :default => 'spec:run'
+Bones {
+  name         'directory_watcher'
+  summary      'A class for watching files within a directory and generating events when those files change'
+  authors      'Tim Pease'
+  email        'tim.pease@gmail.com'
+  url          'http://gemcutter.org/gems/directory_watcher'
+  version      DirectoryWatcher::VERSION
+  ignore_file  '.gitignore'
 
-PROJ.name = 'directory_watcher'
-PROJ.summary = 'A class for watching files within a directory and generating events when those files change'
-PROJ.authors = 'Tim Pease'
-PROJ.email = 'tim.pease@gmail.com'
-PROJ.url = 'http://codeforpeople.rubyforge.org/directory_watcher'
-PROJ.version = DirectoryWatcher::VERSION
-PROJ.rubyforge.name = 'codeforpeople'
-PROJ.ignore_file = '.gitignore'
+  rubyforge.name  'codeforpeople'
 
-PROJ.rdoc.remote_dir = 'directory_watcher'
-PROJ.spec.opts << '--color'
+  depend_on  'rev',          :development => true
+  depend_on  'eventmachine', :development => true
+}
 
-# EOF

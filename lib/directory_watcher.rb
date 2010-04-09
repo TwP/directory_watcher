@@ -211,8 +211,6 @@ require 'yaml'
 #
 class DirectoryWatcher
 
-  VERSION = '1.3.1'    # :nodoc:
-
   # An +Event+ structure contains the _type_ of the event and the file _path_
   # to which the event pertains. The type can be one of the following:
   #
@@ -237,7 +235,49 @@ class DirectoryWatcher
     end
     alias :== :eql?
   }
+
+  LIBPATH = ::File.expand_path(::File.dirname(__FILE__)) + ::File::SEPARATOR
+  PATH = ::File.dirname(LIBPATH) + ::File::SEPARATOR
   # :startdoc:
+
+  # Returns the version string for the library.
+  #
+  def self.version
+    @version ||= File.read(path('version.txt')).strip
+  end
+
+  # Returns the library path for the module. If any arguments are given,
+  # they will be joined to the end of the libray path using
+  # <tt>File.join</tt>.
+  #
+  def self.libpath( *args, &block )
+    rv =  args.empty? ? LIBPATH : ::File.join(LIBPATH, args.flatten)
+    if block
+      begin
+        $LOAD_PATH.unshift LIBPATH
+        rv = block.call
+      ensure
+        $LOAD_PATH.shift
+      end
+    end
+    return rv
+  end
+
+  # Returns the lpath for the module. If any arguments are given, they
+  # will be joined to the end of the path using <tt>File.join</tt>.
+  #
+  def self.path( *args, &block )
+    rv = args.empty? ? PATH : ::File.join(PATH, args.flatten)
+    if block
+      begin
+        $LOAD_PATH.unshift PATH
+        rv = block.call
+      ensure
+        $LOAD_PATH.shift
+      end
+    end
+    return rv
+  end
 
   # call-seq:
   #    DirectoryWatcher.new( directory, options )
@@ -364,7 +404,7 @@ class DirectoryWatcher
   def interval=( val )
     val = Float(val)
     raise ArgumentError, "interval must be greater than zero" if val <= 0
-    @scanner.interval = Float(val)
+    @scanner.interval = val
   end
 
   # Returns the directory scan interval in seconds.
@@ -527,13 +567,10 @@ class DirectoryWatcher
 
 end  # class DirectoryWatcher
 
-begin
-  $LOAD_PATH.unshift(File.expand_path(File.dirname(__FILE__)))
+DirectoryWatcher.libpath {
   require 'directory_watcher/scanner'
   require 'directory_watcher/em_scanner'
   require 'directory_watcher/rev_scanner'
-ensure
-  $LOAD_PATH.shift
-end
+}
 
 # EOF

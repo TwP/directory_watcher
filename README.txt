@@ -3,7 +3,7 @@ Directory Watcher
     http://codeforpeople.rubyforge.org/directory_watcher
 
 == DESCRIPTION:
-  
+
 The directory watcher operates by scanning a directory at some interval and
 generating a list of files based on a user supplied glob pattern. As the file
 list changes from one interval to the next, events are generated and
@@ -11,7 +11,7 @@ dispatched to registered observers. Three types of events are supported --
 added, modified, and removed.
 
 == FEATURES:
-  
+
 See DirectoryWatcher for detailed documentation and usage.
 
 == REQUIREMENTS:

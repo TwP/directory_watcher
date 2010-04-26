@@ -22,8 +22,8 @@ class DirectoryWatcher::RevScanner < ::DirectoryWatcher::Scanner
   # Create a Rev based scanner that will generate file events and pass
   # those events (as an array) to the given _block_.
   #
-  def initialize( &block )
-    super(&block)
+  def initialize( *args, &block )
+    super(*args, &block)
     @watchers = {}
   end
 

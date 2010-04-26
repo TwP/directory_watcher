@@ -21,13 +21,13 @@ class DirectoryWatcher::FseventScanner < DirectoryWatcher::Scanner
   # Create an FSEvent based scanner that will generate file events and pass
   # those events (as an array) to the given _block_.
   #
-  def initialize( *args, &block )
-    super(*args, &block)
+  def initialize( &block )
+    super(&block)
 
     @mutex = Mutex.new
     @ready = ConditionVariable.new
     @signal = 0
-    @notifier = Notifier.new(@dir, self)
+    @notifier = Notifier.new self
   end
 
   # Start the scanner thread. If the scanner is already running, this method
@@ -92,9 +92,11 @@ private
 
   # :stopdoc:
   class Notifier < FSEvent
-    def initialize( dir, scanner )
+    def initialize( scanner )
       super()
       @scanner = scanner
+
+      # FIXME: this is where we want ot look for glob patterns with ** in them
       watch_directories Array(dir)
     end
 

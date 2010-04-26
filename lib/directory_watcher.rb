@@ -331,7 +331,7 @@ class DirectoryWatcher
 
     klass = opts[:scanner].to_s.capitalize + 'Scanner'
     klass = DirectoryWatcher.const_get klass rescue Scanner
-    @scanner = klass.new {|events| notify_observers(events)}
+    @scanner = klass.new(@dir) {|events| notify_observers(events)}
 
     self.glob = opts[:glob] || '*'
     self.interval = opts[:interval] || 30
@@ -581,6 +581,10 @@ class DirectoryWatcher
     end
   end
 
+  autoload(:EmScanner, 'directory_watcher/em_scanner')
+  autoload(:RevScanner, 'directory_watcher/rev_scanner')
+  autoload(:FseventScanner, 'directory_watcher/fsevent_scanner')
+
 end  # class DirectoryWatcher
 
 DirectoryWatcher.libpath {
@@ -590,4 +594,3 @@ DirectoryWatcher.libpath {
   require 'directory_watcher/rev_scanner'
 }
 
-# EOF

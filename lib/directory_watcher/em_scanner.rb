@@ -27,7 +27,7 @@ if DirectoryWatcher::HAVE_EM
 #
 #  * New files are detected only when the watched directory is polled at the
 #    configured interval.
-# 
+#
 class DirectoryWatcher::EmScanner < ::DirectoryWatcher::Scanner
 
   # call-seq:
@@ -36,8 +36,8 @@ class DirectoryWatcher::EmScanner < ::DirectoryWatcher::Scanner
   # Create an EventMachine based scanner that will generate file events and
   # pass those events (as an array) to the given _block_.
   #
-  def initialize( &block )
-    super(&block)
+  def initialize( *args, &block )
+    super(*args, &block)
     @timer = nil
     @run_loop = lambda {_run_loop}
     @watchers = {}
@@ -130,7 +130,7 @@ class DirectoryWatcher::EmScanner < ::DirectoryWatcher::Scanner
     notify
   end
   # :startdoc:
- 
+
 
   private
 
@@ -218,4 +218,3 @@ class DirectoryWatcher::EmScanner < ::DirectoryWatcher::Scanner
 end  # class DirectoryWatcher::EmScanner
 end  # if HAVE_EM
 
-# EOF

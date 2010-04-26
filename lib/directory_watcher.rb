@@ -395,7 +395,12 @@ class DirectoryWatcher
     glob.uniq!
     @scanner.glob = glob
   end
-  attr_reader :glob
+
+  # Returns the array of glob patterns used to monitor files in the directory.
+  #
+  def glob
+    @scanner.glob
+  end
 
   # Sets the directory scan interval. The directory will be scanned every
   # _interval_ seconds for changes to files matching the glob pattern.

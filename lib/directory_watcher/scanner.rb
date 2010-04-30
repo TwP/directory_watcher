@@ -167,7 +167,7 @@ class DirectoryWatcher::Scanner
       files[fn].stable = @stable
       @events << ::DirectoryWatcher::Event.new(:added, fn)
     end
-    self
+    added
   end
 
   # call-seq:
@@ -180,7 +180,7 @@ class DirectoryWatcher::Scanner
   def find_removed( cur, prev )
     removed = prev - cur
     removed.each {|fn| @events << ::DirectoryWatcher::Event.new(:removed, fn)}
-    self
+    removed
   end
 
   # call-seq:
@@ -213,7 +213,7 @@ class DirectoryWatcher::Scanner
         end
       end
     end
-    self
+    nil
   end
 
   # If there are queued files events, then invoke the notify block given

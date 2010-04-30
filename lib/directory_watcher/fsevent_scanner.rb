@@ -25,8 +25,7 @@ class DirectoryWatcher::FseventScanner < DirectoryWatcher::Scanner
     super(&block)
 
     @mutex = Mutex.new
-    @ready = ConditionVariable.new
-    @signal = 0
+    @directories = Array.new
     @notifier = Notifier.new self
   end
 
@@ -50,22 +49,31 @@ class DirectoryWatcher::FseventScanner < DirectoryWatcher::Scanner
 
     @stop = true
     @notifier.stop
-    @mutex.synchronize { @ready.signal }
     @thread.join
     self
   ensure
     @thread = nil
   end
 
-  # Signal the scanner that changes have occurred in the directory being
-  # watched. This method is called by the Notifier class when _on_change_ is
-  # fired by the operating system.
-  #
-  def _signal
-    @mutex.synchronize {
-      @signal += 1
-      @ready.signal
-    }
+  def glob=( value )
+    @glob_hash = (@glob_hash || Hash.new {|h,k| h[k] = Array.new}).clear
+    @glob = value.map {|g| File.expand_path(g)}
+
+    @glob.each do |g|
+      dir = File.dirname(g) << File::SEPARATOR
+      if dir =~ %r/\*\*/
+        g = File.basename(g)
+        Dir[dir].each {|d| @glob_hash[d] << g}
+      else
+        @glob_hash[dir] << File.basename(g)
+      end
+    end
+
+    @glob_hash.each_value {|ary| ary.uniq!}
+  end
+
+  def _add( directories )
+    @mutex.synchronize { @directories.concat directories }
   end
 
 
@@ -90,18 +98,29 @@ private
     end
   end
 
+  #
+  #
+  def directories
+    rv = nil
+    @mutex.synchronize {
+      rv = @directories.dup
+      @directories.clear
+    }
+    rv.sort!.uniq!
+    rv
+  end
+
   # :stopdoc:
   class Notifier < FSEvent
     def initialize( scanner )
       super()
       @scanner = scanner
-
-      # FIXME: this is where we want ot look for glob patterns with ** in them
-      watch_directories Array(dir)
+      watch directories
     end
+    alias :watch :watch_directories
 
     def on_change( directories )
-      @scanner._signal
+      @scanner._add directories
     end
   end
   # :startdoc:

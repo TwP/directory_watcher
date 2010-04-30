@@ -320,7 +320,7 @@ class DirectoryWatcher
 
     klass = opts[:scanner].to_s.capitalize + 'Scanner'
     klass = DirectoryWatcher.const_get klass rescue Scanner
-    @scanner = klass.new(@dir) {|events| notify_observers(events)}
+    @scanner = klass.new {|events| notify_observers(events)}
 
     self.glob = opts[:glob] || '*'
     self.interval = opts[:interval] || 30

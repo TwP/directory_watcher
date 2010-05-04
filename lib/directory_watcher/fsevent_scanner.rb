@@ -15,14 +15,14 @@ if DirectoryWatcher::HAVE_FSEVENT
 class DirectoryWatcher::FseventScanner < DirectoryWatcher::Scanner
 
   # call-seq:
-  #    FseventScanner.new { |events| block }
+  #    FseventScanner.new( directory ) { |events| block }
   #
   # Create an FSEvent based scanner that will generate file events and pass
   # those events (as an array) to the given _block_.
   #
-  def initialize( &block )
-    super(&block)
-    @notifier = Notifier.new
+  def initialize( dir, &block )
+    super(dir, &block)
+    @notifier = FSEvent.new(File.expand_path(dir), 0.1)
   end
 
   # Start the scanner thread. If the scanner is already running, this method
@@ -32,8 +32,9 @@ class DirectoryWatcher::FseventScanner < DirectoryWatcher::Scanner
     return if running?
 
     @stop = false
-    @thread = Thread.new(self) {|scanner| scanner.__send__ :run_loop}
+    run_once
     @notifier.start
+    @thread = Thread.new(self) {|scanner| scanner.__send__ :run_loop}
     self
   end
 
@@ -55,22 +56,15 @@ class DirectoryWatcher::FseventScanner < DirectoryWatcher::Scanner
   #
   #
   def glob=( value )
-    @dir_hash = (@dir_hash || Hash.new {|h,k| h[k] = Array.new}).clear
+    @glob_hash = (@glob_hash || Hash.new).clear
     @glob = value.map {|g| File.expand_path(g)}
 
     @glob.each do |g|
-      dir = File.dirname(g) << File::SEPARATOR
-      if dir =~ %r/\*\*/
-        g = File.basename(g)
-        Dir[dir].each {|d| @dir_hash[d] << File.join(d,g)}
-      else
-        @dir_hash[dir] << File.basename(g)
-      end
+      dir = File.dirname(g)
+      dir.gsub!(%r/\*{1,2}/) {|m| m.length == 2 ? '.*?' : '[^\/]+'}
+      dir << '/?'
+      @glob_hash[Regexp.new(dir)] = File.basename(g)
     end
-
-    @dir_hash.each_value {|ary| ary.uniq!}
-    @notifier.watch_directories(@dir_hash.keys)
-    @notifier.restart if running?
   end
 
 
@@ -81,13 +75,15 @@ private
   # values. The +FileStat+ objects contain the mtime and size of the file.
   #
   def scan_files( directories = nil )
+    return super() if directories.nil?
     files = {}
     ary = []
-    directories ||= @dir_hash.keys
 
     directories.each do |dir|
-      next unless @dir_hash.key? dir
-      @dir_hash[dir].each {|glob| ary.concat(Dir.glob(glob))}
+      @glob_hash.each do |rgxp,glob|
+        next unless rgxp =~ dir
+        ary.concat Dir.glob(File.join(dir, glob))
+      end
     end
 
     ary.each do |fn|
@@ -114,14 +110,13 @@ private
 
     until @stop
       # receive notifications about changed directories
-      directories = @notifier.changed_directories(timeout[])
+      directories = @notifier.changes(timeout[])
       next if @stop
-$stdout.puts directories.inspect
-$stdout.puts timeout[].inspect
+
       # process the changed directories
       unless directories.nil?
+        directories.uniq!
         files = scan_files(directories)
-$stdout.puts files.keys.sort.inspect
         cur, prev = [files.keys, @files.keys]  # current files, previous files
 
         find_added(files, cur, prev)
@@ -161,6 +156,8 @@ $stdout.puts files.keys.sort.inspect
       if cur_stat != prev_stat
         @events << ::DirectoryWatcher::Event.new(:modified, key)
         cur_stat.stable = @stable
+      else
+        cur_stat.stable = prev_stat.stable
       end
     end
     nil
@@ -184,52 +181,6 @@ $stdout.puts files.keys.sort.inspect
     end
     nil
   end
-
-  # :stopdoc:
-  class Notifier < FSEvent
-    SIZEOF_INT = [42].pack('I').size
-
-    def initialize
-      super
-
-      @rd, @wr = IO.pipe
-      @rd_select = [@rd]
-    end
-
-    alias :_start :start
-    def start
-      Thread.new(self) {|notifier| notifier._start}
-    end
-
-    def restart
-      self.stop
-      self.start
-    end
-
-    def on_change( directories )
-      data = Marshal.dump directories
-      @wr.write [data.size].pack('I')
-      @wr.write data
-    end
-
-    def changed_directories( timeout = nil )
-      r, w, e = Kernel.select(@rd_select, nil, nil, timeout) rescue nil
-      return if r.nil?
-
-      data = @rd.read SIZEOF_INT
-      return if data.nil?
-
-      size = data.unpack('I').first
-      data = @rd.read size
-      return if data.nil?
-
-      Marshal.load(data) rescue data
-    end
-
-    alias :changes :changed_directories
-    alias :watch :watch_directories
-  end
-  # :startdoc:
 
 end  # class DirectoryWatcher::FseventScanner
 end  # if HAVE_FSEVENT

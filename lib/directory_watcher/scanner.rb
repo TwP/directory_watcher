@@ -22,7 +22,7 @@ class DirectoryWatcher::Scanner
   # Create a thread-based scanner that will generate file events and pass
   # those events (as an array) to the given _block_.
   #
-  def initialize( &block )
+  def initialize( *args, &block )
     @events = []
     @thread = nil
     @notify = block

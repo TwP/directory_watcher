@@ -569,6 +569,7 @@ end  # class DirectoryWatcher
 
 DirectoryWatcher.libpath {
   require 'directory_watcher/scanner'
+  require 'directory_watcher/coolio_scanner'
   require 'directory_watcher/em_scanner'
   require 'directory_watcher/rev_scanner'
 }

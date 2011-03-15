@@ -175,14 +175,14 @@ require 'yaml'
 # This approach is fairly intensive for short intervals and/or directories
 # with many files.
 #
-# DirectoryWatcher supports using Rev () or EventMachine () instead of a
-# busy polling thread. These libraries use system level kernel hooks to
+# DirectoryWatcher supports using Cool.io, EventMachine, or Rev instead
+# of a busy polling thread. These libraries use system level kernel hooks to
 # receive notifications of file system changes. This makes DirectoryWorker
 # much more efficient.
 #
-# This example will use Rev to generate file notifications.
+# This example will use Cool.io to generate file notifications.
 #
-#    dw = DirectoryWatcher.new '.', :glob => '**/*.rb', :scanner => :rev
+#    dw = DirectoryWatcher.new '.', :glob => '**/*.rb', :scanner => :coolio
 #    dw.add_observer {|*args| args.each {|event| puts event}}
 #
 #    dw.start
@@ -192,6 +192,17 @@ require 'yaml'
 # The scanner cannot be changed after the DirectoryWatcher has been
 # created. To use an EventMachine scanner, pass :em as the :scanner
 # option.
+#
+# If you wish to use the Cool.io scanner, then you must have the Cool.io gem
+# installed. The same goes for EventMachine and Rev. To install any of these
+# gems run the following on the command line:
+#
+#   gem install cool.io
+#   gem install eventmachine
+#   gem install rev
+#
+# Note: Rev has been replace by Cool.io and support for the Rev scanner will
+# eventually be dropped from DirectoryWatcher.
 #
 # == Contact
 #
@@ -300,7 +311,7 @@ class DirectoryWatcher
   #                            from the file when the directory watcher is
   #                            stopped and started (respectively)
   #    :scanner   =>  nil      the directory scanning strategy to use with
-  #                            the directory watcher (either :em :rev or nil)
+  #                            the directory watcher (either :coolio, :em, :rev or nil)
   #
   # The default glob pattern will scan all files in the configured directory.
   # Setting the :stable option to +nil+ will prevent stable events from being

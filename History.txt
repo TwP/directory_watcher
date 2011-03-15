@@ -1,4 +1,4 @@
-== 1.4.0 / 2011-03-XX
+== 1.4.0 / 2011-03-15
 
 Minor Enhancements
 - added support for 'cool.io' [Jonathan Stott]

@@ -1,3 +1,8 @@
+== 1.4.0 / 2011-03-XX
+
+Minor Enhancements
+- added support for 'cool.io' [Jonathan Stott]
+
 == 1.3.2 / 2010-04-09
 
 * 1 bug fix

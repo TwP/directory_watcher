@@ -1,3 +1,8 @@
+== 1.4.1 / 2011-08-29
+
+Minor Enhancements
+- support for latest 'cool.io'
+
 == 1.4.0 / 2011-03-15
 
 Minor Enhancements

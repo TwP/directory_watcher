@@ -154,7 +154,7 @@ class DirectoryWatcher::CoolioScanner < ::DirectoryWatcher::Scanner
       @scanner = scanner
     end
 
-    def on_change
+    def on_change( *args )
       @scanner._on_change self
     end
 
@@ -171,7 +171,7 @@ class DirectoryWatcher::CoolioScanner < ::DirectoryWatcher::Scanner
       @scanner = scanner
     end
 
-    def on_timer
+    def on_timer( *args )
       @scanner._on_timer
     end
   end

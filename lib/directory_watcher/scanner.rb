@@ -17,10 +17,20 @@ class DirectoryWatcher::Scanner
   attr_accessor :files
 
   # call-seq:
-  #    Scanner.new( opts = {} ) { |events| block }
+  #    Scanner.new( opts = {} )
   #
-  # Create a thread-based scanner that will generate file events and pass
-  # those events (as an array) to the given _block_.
+  # Available options are:
+  #
+  #   :glob     - same as that in DirectoryWatcher
+  #   :stable   - same as that in DirectoryWatcher
+  #   :pre_load - same as that in DirectoryWatcher
+  #   :interval - same as that in DirectoryWatcher
+  #
+  #   :event_queue - This is a Queue instance that the Scanenr will emit the
+  #                  events too
+  #
+  # Generally all of them are required. The Scanner is not generally used out
+  # side of a DirectoryWatcher so this is more of an internal API
   #
   def initialize( opts = {} )
     @glob = opts[:glob]

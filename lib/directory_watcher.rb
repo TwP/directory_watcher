@@ -508,35 +508,51 @@ class DirectoryWatcher
   # Start the directory watcher scanning thread. If the directory watcher is
   # already running, this method will return without taking any action.
   #
+  # Start returns one the scanner and the notifer say they are running
+  #
   def start
+    logger.debug "start (running -> #{running?})"
     return self if running?
 
     load!
+    logger.debug "starting scanner"
     @scanner.start
+    Thread.pass until @scanner.running?
+
+    logger.debug "starting notifier"
     @notifier.start
+    Thread.pass until @notifier.running?
     self
   end
 
-  # Pauses the directory watcher scanning thread. It is not 'stopped' it will
-  # not report any events until unpaused.
+  # Pauses the scanner.
+  #
   def pause
     @scanner.pause
   end
 
-  # Unpauses the directory watcher scanning thread. This will start events
-  # flowing again
-  def unpause
-    @scanner.unpause
+  # Resume the emitting of events
+  #
+  def resume
+    @scanner.resume
   end
 
   # Stop the directory watcher scanning thread. If the directory watcher is
   # already stopped, this method will return without taking any action.
   #
+  # Stop returns once the scanner and notifier say they are no longer running
   def stop
+    logger.debug "stop (running -> #{running?})"
     return self unless running?
 
+    logger.debug "stopping scanner"
     @scanner.stop
+    Thread.pass while @scanner.running?
+
+    logger.debug "stopping notifier"
     @notifier.stop
+    Thread.pass while @notifier.running?
+
     self
   ensure
     persist!

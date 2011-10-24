@@ -79,7 +79,8 @@ module DirectoryWatcher::Threaded
     @_activity_thread.working = false
   end
 
-  def unpause
+  # Resume the activity thread
+  def resume
     @_activity_thread.working = true
   end
 

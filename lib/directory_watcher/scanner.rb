@@ -161,8 +161,9 @@ class DirectoryWatcher::Scanner
   # the observers.
   #
   def notify( events )
-    until events.empty? do
-      @event_queue.enq( events.shift )
+    events = [ events ].flatten
+    while e = events.shift do
+      @event_queue.enq( e )
     end
   end
 end

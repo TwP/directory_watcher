@@ -8,6 +8,7 @@ module DirectoryWatcherSpecs
     end
 
     def update( *event_list )
+      logger.debug "got event #{event_list}"
       event_list.each { |e| @events << e }
     end
   end
@@ -38,14 +39,16 @@ module DirectoryWatcherSpecs
 
     def run_and_wait_for_event_count(count, &block )
       before_count = @observer.events.size
-      @watcher.unpause
+      @watcher.resume
+      logger.debug "Before yielding event_count = #{before_count}"
+      logger.debug @observer.events
       yield self
       wait_for_events( before_count + count )
       return self
     end
 
     def run_and_wait_for_scan_count(count, &block)
-      @watcher.unpause
+      @watcher.resume
       yield self
       wait_for_scan_count( count )
       return self
@@ -63,10 +66,11 @@ module DirectoryWatcherSpecs
       @observer.events.clear
       @watcher.start
       @watcher.pause
+      logger.debug "Scenario#reset with pause"
     end
 
     def run_once_and_wait_for_event_count( count, &block )
-      @watcher.unpause
+      @watcher.resume
       @watcher.stop
       before_count = @observer.events.size
       yield self
@@ -78,12 +82,21 @@ module DirectoryWatcherSpecs
     private
 
     def wait_for_events( limit )
-      Thread.pass until @observer.events.size >= limit
+      #Thread.pass until @observer.events.size >= limit
+      until @observer.events.size >= limit do
+        Thread.pass
+        sleep(0.1)
+        logger.debug "Waiting for #{limit} events, I have #{@observer.events.size}"
+      end
     end
 
     def wait_for_scan_count( limit )
       @watcher.maximum_scans = limit
-      Thread.pass until @watcher.finished_scans?
+      #Thread.pass until @watcher.finished_scans?
+      until @watcher.finished_scans?
+        sleep(0.1)
+        logger.debug "Waiting for scan count #{limit} got #{@watcher.scans} #{@watcher.maximum_scans}"
+      end
     end
 
   end

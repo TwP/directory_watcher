@@ -3,6 +3,12 @@ require 'rspec/autorun'
 require 'scanner_scenarios'
 require 'utility_classes'
 
+require 'logging'
+include Logging.globally
+Logging.logger.root.appenders = Logging.appenders.stderr
+Logging.logger.root.level = :off
+Thread.abort_on_exception = true
+
 module DirectoryWatcherSpecs::Helpers
   def scratch_path( *parts )
     File.join( @scratch_dir, *parts )
@@ -24,6 +30,7 @@ RSpec.configure do |config|
   config.before(:each) do
     @spec_dir = DirectoryWatcher.path( "spec" )
     @scratch_dir = File.join(@spec_dir, "scratch")
+    FileUtils.rm_rf @scratch_dir if File.directory?( @scratch_dir )
     FileUtils.mkdir @scratch_dir unless File.directory?( @scratch_dir )
   end
 

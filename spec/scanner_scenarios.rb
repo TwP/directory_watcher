@@ -49,10 +49,9 @@ shared_examples_for "Scanner" do
 
     it "sends stable events" do
       stable_file = scratch_path( 'stable' )
-      scenario_with_stable.run_and_wait_for_event_count(1) do |s|
+      scenario_with_stable.run_and_wait_for_event_count(2) do |s|
         touch( stable_file )
-      end.run_and_wait_for_event_count(1) do |s|
-        # do nothing
+        # do nothing wait for the stable event.
       end.stop
 
       scenario_with_stable.events.should be_events_like [ [:added, 'stable'], [:stable, 'stable'] ]
@@ -63,7 +62,8 @@ shared_examples_for "Scanner" do
 
       scenario.run_and_wait_for_scan_count(2) do
         Dir.mkdir( a_dir )
-      end
+      end.stop
+
       scenario.events.should be_empty
     end
 
@@ -72,7 +72,8 @@ shared_examples_for "Scanner" do
 
       scenario.run_and_wait_for_event_count(1) do
         Dir.mkdir( a_dir )
-        touch( File.join( a_dir, 'subfile' ) )
+        subfile = File.join( a_dir, 'subfile' )
+        touch( subfile )
       end.stop
 
       scenario.events.should be_events_like [ [:added, 'subfile'] ]
@@ -141,12 +142,12 @@ shared_examples_for "Scanner" do
         touch( modified_file, Time.now - 20 )
       end.run_and_wait_for_event_count(1) do
         touch( modified_file, Time.now - 10 )
-      end
+      end.stop
 
       scenario_with_persist.events.should be_events_like( [[ :added, 'modified'], [ :modified, 'modified' ]] )
-      scenario_with_persist.stop
 
       scenario_with_persist.reset
+      Thread.pass until scenario_with_persist.events.size >= 1
       scenario_with_persist.run_and_wait_for_event_count(1) do
         touch( modified_file )
       end.stop

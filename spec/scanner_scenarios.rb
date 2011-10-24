@@ -79,6 +79,16 @@ shared_examples_for "Scanner" do
     end
   end
 
+  context "run_once" do
+    it "can be run on command via 'run_once'" do
+      one_shot_file = scratch_path( "run_once" )
+      scenario.run_once_and_wait_for_event_count(1) do
+        touch( one_shot_file )
+      end.stop
+      scenario.events.should be_events_like [ [:added, 'run_once'] ]
+    end
+  end
+
   context "preload option " do
     it "skips initial add events" do
       modified_file = scratch_path( 'modified' )

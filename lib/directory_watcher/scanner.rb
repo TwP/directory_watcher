@@ -27,6 +27,7 @@ class DirectoryWatcher::Scanner
     @stable = opts[:stable]
     @pre_load = opts[:pre_load]
     @event_queue = opts[:event_queue]
+    @files = Hash.new
     self.interval = opts[:interval]
   end
 

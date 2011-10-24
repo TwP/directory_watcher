@@ -614,7 +614,8 @@ class DirectoryWatcher
   # the observers.
   #
   def run_once
-    @scanner.run_once
+    @scanner.run
+    @notifier.run
     self
   end
 end  # class DirectoryWatcher

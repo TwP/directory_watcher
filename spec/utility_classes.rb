@@ -65,6 +65,16 @@ module DirectoryWatcherSpecs
       @watcher.pause
     end
 
+    def run_once_and_wait_for_event_count( count, &block )
+      @watcher.unpause
+      @watcher.stop
+      before_count = @observer.events.size
+      yield self
+      @watcher.run_once
+      wait_for_events( before_count + count )
+      return self
+    end
+
     private
 
     def wait_for_events( limit )

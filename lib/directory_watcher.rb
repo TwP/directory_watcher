@@ -5,6 +5,7 @@
 #
 
 require 'observer'
+require 'thread'
 require 'yaml'
 
 # == Synopsis
@@ -329,16 +330,17 @@ class DirectoryWatcher
       Dir.mkdir @dir
     end
 
+    @event_queue = opts[:event_queue] = Queue.new
+    @notifier = Notifier.new(@event_queue, @observer_peers)
+
     klass = opts[:scanner].to_s.capitalize + 'Scanner'
     klass = DirectoryWatcher.const_get klass rescue Scanner
-    @scanner = klass.new {|events| notify_observers(events)}
+    @scanner = klass.new( opts )
 
     self.glob = opts[:glob] || '*'
     self.interval = opts[:interval] || 30
     self.stable = opts[:stable] || nil
     self.persist = opts[:persist]
-
-    @scanner.reset opts[:pre_load]
   end
 
   # call-seq:
@@ -511,7 +513,20 @@ class DirectoryWatcher
 
     load!
     @scanner.start
+    @notifier.start
     self
+  end
+
+  # Pauses the directory watcher scanning thread. It is not 'stopped' it will
+  # not report any events until unpaused.
+  def pause
+    @scanner.pause
+  end
+
+  # Unpauses the directory watcher scanning thread. This will start events
+  # flowing again
+  def unpause
+    @scanner.unpause
   end
 
   # Stop the directory watcher scanning thread. If the directory watcher is
@@ -521,9 +536,43 @@ class DirectoryWatcher
     return self unless running?
 
     @scanner.stop
+    @notifier.stop
     self
   ensure
     persist!
+  end
+
+  # Sets the maximum number of scans the scanner is to make on the directory
+  #
+  def maximum_scans=( value )
+    unless value.nil?
+      value = Integer(value)
+      raise ArgumentError, "maximum scans must be >= 1" unless value >= 1
+    end
+
+    @scanner.maximum_iterations = value
+  end
+
+  # Returns the maximum number of scans of the directory watcher
+  #
+  def maximum_scans
+    @scanner.maximum_iterations
+  end
+
+  # Returns the number of scans of the directory scanner it has
+  # completed thus far.
+  #
+  # This will always report 0 unless a maximum number of scans has been set
+  #
+  def scans
+    @scanner.iterations
+  end
+
+  # Returns true if the maximum number of scans has been reached.
+  #
+  def finished_scans?
+    return true if maximum_scans and (scans >= maximum_scans)
+    return false
   end
 
   # call-seq:
@@ -568,22 +617,11 @@ class DirectoryWatcher
     @scanner.run_once
     self
   end
-
-
-  private
-
-  # Invoke the update method of each registered observer in turn passing the
-  # list of file events to each.
-  #
-  def notify_observers( events )
-    @observer_peers.each do |observer, func|
-      begin; observer.send(func, *events); rescue Exception; end
-    end
-  end
-
 end  # class DirectoryWatcher
 
 DirectoryWatcher.libpath {
+  require 'directory_watcher/threaded'
+  require 'directory_watcher/notifier'
   require 'directory_watcher/scanner'
   require 'directory_watcher/coolio_scanner'
   require 'directory_watcher/em_scanner'

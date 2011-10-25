@@ -7,8 +7,7 @@ describe DirectoryWatcher do
 end
 
 describe "Scanners" do
-  #[ nil, :em, :coolio ].each do |scanner|
-  [ nil, :em ].each do |scanner|
+  [ nil, :em, :coolio ].each do |scanner|
     context "#{scanner} Scanner" do
 
       let( :default_options       ) { { :glob => "**/*", :interval => 0.01 }                     }

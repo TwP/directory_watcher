@@ -147,7 +147,10 @@ shared_examples_for "Scanner" do
       scenario_with_persist.events.should be_events_like( [[ :added, 'modified'], [ :modified, 'modified' ]] )
 
       scenario_with_persist.reset
+      scenario_with_persist.resume
       Thread.pass until scenario_with_persist.events.size >= 1
+      scenario_with_persist.pause
+
       scenario_with_persist.run_and_wait_for_event_count(1) do
         touch( modified_file )
       end.stop

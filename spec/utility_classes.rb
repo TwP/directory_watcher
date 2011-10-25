@@ -30,6 +30,7 @@ module DirectoryWatcherSpecs
   #
   class Scenario
 
+    attr_reader :watcher
     def initialize( watcher )
       @watcher = watcher
       @observer = EventObserver.new
@@ -41,7 +42,7 @@ module DirectoryWatcherSpecs
       before_count = @observer.events.size
       @watcher.resume
       logger.debug "Before yielding event_count = #{before_count}"
-      logger.debug @observer.events
+      logger.debug @observer.events.inspect
       yield self
       wait_for_events( before_count + count )
       return self
@@ -60,6 +61,14 @@ module DirectoryWatcherSpecs
 
     def stop
       @watcher.stop
+    end
+
+    def pause
+      @watcher.pause
+    end
+
+    def resume
+      @watcher.resume
     end
 
     def reset

@@ -238,9 +238,8 @@ class DirectoryWatcher::RevScanner < ::DirectoryWatcher::Scanner
       @scanner = scanner
     end
 
-    def on_change( prev_stat, current_stat )
-      new_stat = ::DirectoryWatcher::FileStat.new(current_stat.mtime, current_stat.size, @scanner.stable)
-      @scanner.on_change(self, new_stat)
+    def on_change
+      @scanner.on_change(self, stat)
     end
 
     def stat

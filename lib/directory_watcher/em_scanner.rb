@@ -190,7 +190,7 @@ class DirectoryWatcher::EmScanner < ::DirectoryWatcher::Scanner
 
   # Before the peridic timers are kicked off and we start using the event loop
   # proper, we need to setup file watches on all the existing files. This is
-  # because pre_load may have happend and we need to watch those files. And
+  # because pre_load may have happened and we need to watch those files. And
   # some of those files may have disappared from the time of the scan to the
   # time we are called
   #

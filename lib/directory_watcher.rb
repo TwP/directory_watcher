@@ -221,36 +221,9 @@ require 'yaml'
 #
 # Tim Pease
 #
+require 'directory_watcher/event'
 class DirectoryWatcher
 
-  # An +Event+ structure contains the _type_ of the event and the file _path_
-  # to which the event pertains. The type can be one of the following:
-  #
-  #    :added      =>  file has been added to the directory
-  #    :modified   =>  file has been modified (either mtime or size or both
-  #                    have changed)
-  #    :removed    =>  file has been removed from the directory
-  #    :stable     =>  file has stabilized since being added or modified
-  #
-  Event = Struct.new(:type, :path) {
-    def to_s( ) "#{type} '#{path}'" end
-  }
-
-  # :stopdoc:
-  # A persistable file stat structure used internally by the directory
-  # watcher.
-  #
-  FileStat = Struct.new(:mtime, :size, :stable) {
-    def eql?( other )
-      return false unless other.instance_of? FileStat
-      self.mtime == other.mtime and self.size == other.size
-    end
-    alias :== :eql?
-  }
-
-  LIBPATH = ::File.expand_path(::File.dirname(__FILE__)) + ::File::SEPARATOR
-  PATH = ::File.dirname(LIBPATH) + ::File::SEPARATOR
-  # :startdoc:
 
   # Returns the version string for the library.
   #

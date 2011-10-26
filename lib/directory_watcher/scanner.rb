@@ -89,7 +89,7 @@ class DirectoryWatcher::Scanner
         begin
           stat = File.stat fn
           next unless stat.file?
-          files[fn] = ::DirectoryWatcher::FileStat.new(stat.mtime, stat.size)
+          files[fn] = ::DirectoryWatcher::FileStat.new(fn, stat.mtime, stat.size)
         rescue SystemCallError; end
       end
     end

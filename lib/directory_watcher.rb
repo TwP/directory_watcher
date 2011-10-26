@@ -222,6 +222,7 @@ require 'yaml'
 # Tim Pease
 #
 require 'directory_watcher/paths'
+require 'directory_watcher/file_stat'
 require 'directory_watcher/scan'
 require 'directory_watcher/event'
 class DirectoryWatcher

@@ -28,7 +28,7 @@ end
 
 RSpec.configure do |config|
   config.before(:each) do
-    @spec_dir = DirectoryWatcher.path( "spec" )
+    @spec_dir = DirectoryWatcher.sub_path( "spec" )
     @scratch_dir = File.join(@spec_dir, "scratch")
     FileUtils.rm_rf @scratch_dir if File.directory?( @scratch_dir )
     FileUtils.mkdir @scratch_dir unless File.directory?( @scratch_dir )

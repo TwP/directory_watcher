@@ -221,47 +221,16 @@ require 'yaml'
 #
 # Tim Pease
 #
+require 'directory_watcher/paths'
 require 'directory_watcher/event'
 class DirectoryWatcher
 
+  extend Paths
 
   # Returns the version string for the library.
   #
   def self.version
     @version ||= File.read(path('version.txt')).strip
-  end
-
-  # Returns the library path for the module. If any arguments are given,
-  # they will be joined to the end of the libray path using
-  # <tt>File.join</tt>.
-  #
-  def self.libpath( *args, &block )
-    rv =  args.empty? ? LIBPATH : ::File.join(LIBPATH, args.flatten)
-    if block
-      begin
-        $LOAD_PATH.unshift LIBPATH
-        rv = block.call
-      ensure
-        $LOAD_PATH.shift
-      end
-    end
-    return rv
-  end
-
-  # Returns the lpath for the module. If any arguments are given, they
-  # will be joined to the end of the path using <tt>File.join</tt>.
-  #
-  def self.path( *args, &block )
-    rv = args.empty? ? PATH : ::File.join(PATH, args.flatten)
-    if block
-      begin
-        $LOAD_PATH.unshift PATH
-        rv = block.call
-      ensure
-        $LOAD_PATH.shift
-      end
-    end
-    return rv
   end
 
   # call-seq:
@@ -609,7 +578,7 @@ class DirectoryWatcher
   end
 end  # class DirectoryWatcher
 
-DirectoryWatcher.libpath {
+DirectoryWatcher.lib_path {
   require 'directory_watcher/threaded'
   require 'directory_watcher/notifier'
   require 'directory_watcher/scanner'

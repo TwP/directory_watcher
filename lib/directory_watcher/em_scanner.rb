@@ -158,6 +158,11 @@ class DirectoryWatcher::EmScanner
     self.iterations >= self.maximum_iterations
   end
 
+  def on_scan
+    scan_and_watch_files
+    progress_towards_maximum_iterations
+  end
+
   # A Watcher told us that a file has been deleted. Remove the watcher from the
   # list of known watchers, and send a :removed event to the collection queue.
   #
@@ -197,9 +202,7 @@ class DirectoryWatcher::EmScanner
   def start_periodic_scan
     unless @timer then
       @timer = EventMachine::PeriodicTimer.new( @interval ) do
-        logger.debug "PeriodicTimer at #{@interval}"
-        scan_and_watch_files
-        progress_towards_maximum_iterations
+        on_scan
       end
     end
   end

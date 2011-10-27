@@ -229,6 +229,7 @@ require 'directory_watcher/event'
 require 'directory_watcher/threaded'
 require 'directory_watcher/collector'
 require 'directory_watcher/notifier'
+require 'directory_watcher/scan_and_queue'
 class DirectoryWatcher
 
   extend Paths

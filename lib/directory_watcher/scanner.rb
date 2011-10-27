@@ -1,6 +1,6 @@
 # The Scanner is responsible for polling the watched directory at a regular
 # interval and generating a Scan which it will then send down the collection
-# queeu to the Collector.
+# queue to the Collector.
 #
 # The Scanner is a pure Ruby class, and as such it works across all Ruby
 # interpreters on the major platforms. This also means that it can be
@@ -9,9 +9,6 @@
 #
 class DirectoryWatcher::Scanner
   include DirectoryWatcher::Threaded
-
-  attr_accessor :glob
-
   # call-seq:
   #    Scanner.new( glob, interval, collection_queue )
   #
@@ -24,8 +21,7 @@ class DirectoryWatcher::Scanner
   # side of a DirectoryWatcher so this is more of an internal API
   #
   def initialize( glob, interval, collection_queue )
-    @glob = glob
-    @collection_queue = collection_queue
+    @scan_and_queue = ::DirectoryWatcher::ScanAndQueue.new( glob, collection_queue )
     self.interval = interval
   end
 
@@ -33,10 +29,6 @@ class DirectoryWatcher::Scanner
   # results to the Collector
   #
   def run
-    scan = ::DirectoryWatcher::Scan.new( @glob )
-    scan.run
-    logger.debug "Scanned #{@glob} and got #{scan.run.size} items"
-    scan.results.each { |s| logger.debug "#{s}" }
-    @collection_queue.enq scan
+    @scan_and_queue.scan_and_queue
   end
 end

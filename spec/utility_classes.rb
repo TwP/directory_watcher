@@ -94,7 +94,7 @@ module DirectoryWatcherSpecs
       #Thread.pass until @observer.events.size >= limit
       until @observer.events.size >= limit do
         Thread.pass
-        sleep(0.1)
+        sleep(0.01)
         logger.debug "Waiting for #{limit} events, I have #{@observer.events.size}"
       end
     end
@@ -103,7 +103,7 @@ module DirectoryWatcherSpecs
       @watcher.maximum_scans = limit
       #Thread.pass until @watcher.finished_scans?
       until @watcher.finished_scans?
-        sleep(0.1)
+        sleep(0.01)
         logger.debug "Waiting for scan count #{limit} got #{@watcher.scans} #{@watcher.maximum_scans}"
       end
     end

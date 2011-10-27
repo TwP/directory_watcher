@@ -38,9 +38,6 @@ class DirectoryWatcher::CoolioScanner < DirectoryWatcher::EventableScanner
     end
   end
 
-  #######
-  private
-  #######
   #
   # Return the cool.io loop object
   #
@@ -60,7 +57,7 @@ class DirectoryWatcher::CoolioScanner < DirectoryWatcher::EventableScanner
   # and +on_modified+ callbacks for the EventableScanner.
   class Watcher < Coolio::StatWatcher
     def self.watch(fn, scanner )
-      Watcher.new(fn, scanner)
+      new(fn, scanner)
     end
 
     def initialize( fn, scanner )
@@ -70,7 +67,7 @@ class DirectoryWatcher::CoolioScanner < DirectoryWatcher::EventableScanner
       i = scanner.interval < 5 ? scanner.interval : 0
       super(fn, i)
       @scanner = scanner
-      attach(scanner.coolio_loop)
+      attach(scanner.event_loop)
     end
 
     # Cool.io uses on_change so we convert that to the appropriate

@@ -8,6 +8,7 @@ end
 
 describe "Scanners" do
   [ nil, :em, :coolio ].each do |scanner|
+#  [ :rev ].each do |scanner|
     context "#{scanner} Scanner" do
 
       let( :default_options       ) { { :glob => "**/*", :interval => 0.05}                      }

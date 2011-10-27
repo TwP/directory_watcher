@@ -44,7 +44,7 @@ class DirectoryWatcher::Collector
       on_stat(stat, emit_events)
       seen_paths << stat.path
     end
-    emit_removed_events( seen_paths )
+    emit_removed_events(seen_paths)
   end
 
   # Process a single stat and emit an event if necessary.
@@ -117,7 +117,7 @@ class DirectoryWatcher::Collector
     @stats.keys.each do |existing_path|
       next if seen_paths.include?(existing_path)
       old_stat = @stats.delete(existing_path)
-      emit_event_for(old_stat, nil)
+      emit_event_for(old_stat, ::DirectoryWatcher::FileStat.for_removed_path(existing_path))
     end
   end
 
@@ -129,6 +129,8 @@ class DirectoryWatcher::Collector
   #
   # Returns nothing
   def emit_event_for( old_stat, new_stat )
+    logger.debug "old_stat: #{old_stat}"
+    logger.debug "new_stat: #{new_stat}"
     event = DirectoryWatcher::Event.from_stats( old_stat, new_stat )
     @notification_queue.enq event if should_emit?(event)
   end

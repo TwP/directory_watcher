@@ -11,10 +11,18 @@ class DirectoryWatcher::FileStat
   # The size of the file in bytes
   attr_accessor :size
 
+  def self.for_removed_path( path )
+    ::DirectoryWatcher::FileStat.new(path, nil, nil)
+  end
+
   def initialize( path, mtime, size )
     @path = path
     @mtime = mtime
     @size = size
+  end
+
+  def removed?
+    @mtime.nil? || @size.nil?
   end
 
   def eql?( other )

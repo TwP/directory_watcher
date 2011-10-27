@@ -23,8 +23,8 @@ class DirectoryWatcher::Event
   #
   def self.from_stats( old_stat, new_stat )
     if old_stat != new_stat then
-      return DirectoryWatcher::Event.new( :added, new_stat.path    ) if old_stat.nil?
-      return DirectoryWatcher::Event.new( :removed, old_stat.path  ) if new_stat.nil?
+      return DirectoryWatcher::Event.new( :removed,  new_stat.path ) if new_stat.removed?
+      return DirectoryWatcher::Event.new( :added,    new_stat.path ) if old_stat.nil?
       return DirectoryWatcher::Event.new( :modified, new_stat.path )
     else
       return DirectoryWatcher::Event.new( :stable, new_stat.path   )

@@ -33,7 +33,7 @@ end
 #  * New files are detected only when the watched directory is polled at the
 #    configured interval.
 #
-class DirectoryWatcher::EmScanner < ::DirectoryWatcher::Scanner
+class DirectoryWatcher::EmScanner
 
   # call-seq:
   #    EmScanner.new( options = {} )
@@ -42,8 +42,12 @@ class DirectoryWatcher::EmScanner < ::DirectoryWatcher::Scanner
   # pass those events to the given Queue. See DirectoryWatcher::Scanner for
   # option definitions
   #
-  def initialize( options = {} )
-    super(options)
+  def initialize( glob, interval, collection_queue )
+    @scan_and_queue = DirectoryWatcher::ScanAndQueue.new(glob, collection_queue)
+    @collection_queue = collection_queue
+
+    @interval = interval
+
     @watchers = {}
     @timer = nil
     @stopping = false         # A guard while we are shutting down
@@ -59,14 +63,6 @@ class DirectoryWatcher::EmScanner < ::DirectoryWatcher::Scanner
   def running?
     return !@stopping if @timer
     return false
-  end
-
-  # Before we start properly, we need to reset everything and start watching the
-  # exising files
-  #
-  def before_starting
-    super
-    setup_existing_watches_and_alert_removed
   end
 
   # Start the EventMachine scanner. If the scanner has already been started
@@ -86,8 +82,7 @@ class DirectoryWatcher::EmScanner < ::DirectoryWatcher::Scanner
       Thread.pass until EventMachine.reactor_running?
     end
 
-    EventMachine.defer( lambda { before_starting },
-                        lambda { start_periodic_timer } )
+    EventMachine.next_tick( lambda { start_periodic_scan } )
   end
 
   # Stop the EventMachine scanner. If the scanner is already stopped this
@@ -103,24 +98,27 @@ class DirectoryWatcher::EmScanner < ::DirectoryWatcher::Scanner
     teardown_timer_and_watches
     @stopping = false
     if @em_thread then
-      EventMachine.stop_event_loop
+      EventMachine.next_tick do
+        EventMachine.stop_event_loop
+      end
     end
   end
 
-  # Pauses the emitting of events. While the scanner is paused, no events will
-  # be emitted. If existing files that have watchers on on them are modified,
-  # then those events will be lost.
+  # Pauses sending of FileStat and Scans items to the collection Queue.
+  # The reactions of Watchers to existing will be ignored.
   #
   def pause
     @paused = true
   end
 
-  # Resume emitting events
+  # Resume sending of FileStat and Scan items to the collection Queue
   #
   def resume
     @paused = false
   end
 
+  # Is the Scanner currently paused?
+  #
   def paused?
     @paused
   end
@@ -133,27 +131,10 @@ class DirectoryWatcher::EmScanner < ::DirectoryWatcher::Scanner
   def join( limit = nil )
   end
 
-  # Create and return a new Watcher instance for the given filename _fn_.
+  # Run a scan all by its lonesom
   #
-  def watch_file( fn )
-    @watchers[fn] = EventMachine.watch_file fn, Watcher, self
-  end
-
-  # Delete the given file from the system and fire the appripriate event
-  #
-  def delete_file( fn )
-    return if paused?
-    watcher = @watchers.delete(fn)
-    @files.delete(fn)
-    notify(::DirectoryWatcher::Event.new(:removed, fn))
-  end
-
-  # Modify the given file in the system and fire the appripriate event
-  #
-  def modify_file( fn )
-    return if paused?
-    @files[fn] = @watchers[fn].stat
-    notify(::DirectoryWatcher::Event.new(:modified, fn))
+  def run
+    @scan_and_queue.scan_and_queue
   end
 
   # Setting maximum iterations means hooking into the periodic timer event and
@@ -171,80 +152,94 @@ class DirectoryWatcher::EmScanner < ::DirectoryWatcher::Scanner
   attr_reader :maximum_iterations
   attr_reader :iterations
 
-  # Notify added and stable events on a periodic basis. The removed and modified
-  # events will be issued via FileWatch objects. This timer isn't a periodic
-  # timer since this 'possibly' could be an expensive operation, it is a on shot
-  # timer that adds itself back to the event loop
-  def start_periodic_timer
-    unless @timer then
-      @timer = EventMachine::PeriodicTimer.new( interval ) do
-        notify_added_and_stable
-        progress_towards_maximum_iterations
-      end
-    end
+  # Have we completed up to the maximum_iterations?
+  #
+  def finished_iterations?
+    self.iterations >= self.maximum_iterations
   end
+
+  # A Watcher told us that a file has been deleted. Remove the watcher from the
+  # list of known watchers, and send a :removed event to the collection queue.
+  #
+  def on_removed( stat )
+    unwatch_file(stat.path)
+    logger.debug "on_removed #{stat.path}"
+    queue_item(stat)
+  end
+
+  # A Watcher told us that a file has changed. So send the new Stat of that file
+  # down collection_queue.
+  #
+  def on_modified( stat )
+    logger.debug "on_modified #{stat.path}"
+    queue_item(stat)
+  end
+
 
   #######
   private
   #######
 
-  # Before the peridic timers are kicked off and we start using the event loop
-  # proper, we need to setup file watches on all the existing files. This is
-  # because pre_load may have happened and we need to watch those files. And
-  # some of those files may have disappared from the time of the scan to the
-  # time we are called
+  # Send the given item to the collection queue
   #
-  def setup_existing_watches_and_alert_removed
-    events = []
-    to_watch = []
-    files.keys.each do |fn|
-      if File.exist?( fn ) then
-        to_watch << fn
-      else
-        files.delete fn
-        events << ::DirectoryWatcher::Event.new(:removed, fn)
-      end
+  def queue_item( item )
+    if paused? then
+      logger.debug "Not queueing item, we're paused"
+    else
+      @collection_queue.enq item
     end
-    # do this so that the notifications for removed files will probably go out
-    # before anything that might happen to the watched files.
-    notify(events) unless events.empty?
-
-    to_watch.each { |fn| watch_file(fn) }
   end
 
+  # Notify added and stable events on a periodic basis. The removed and modified
+  # events will be issued via FileWatch objects. This timer isn't a periodic
+  # timer since this 'possibly' could be an expensive operation, it is a on shot
+  # timer that adds itself back to the event loop
+  def start_periodic_scan
+    unless @timer then
+      @timer = EventMachine::PeriodicTimer.new( @interval ) do
+        logger.debug "PeriodicTimer at #{@interval}"
+        scan_and_watch_files
+        progress_towards_maximum_iterations
+      end
+    end
+  end
+
+  def scan_and_watch_files
+    scan = @scan_and_queue.scan_and_queue
+    scan.results.each do |stat|
+      watch_file(stat.path)
+    end
+  end
+
+  # Create and return a new Watcher instance for the given filename _fn_.
+  #
+  def watch_file( fn )
+    if (not @watchers[fn]) and File.exist?(fn) then
+      logger.debug "Watching file #{fn}"
+      @watchers[fn] = EventMachine.watch_file fn, Watcher, self
+    end
+  end
+
+  def unwatch_file( fn )
+    logger.debug "Unwatching file #{fn}"
+    watcher = @watchers.delete(fn)
+    # EM takes care of stopping the watch since the file is deleted
+  end
+
+
+  # Remove all timers and watchers from the event loop, we need to do this in
+  # the event loop it self, as they could be executing currently.
+  #
   def teardown_timer_and_watches
-    @timer.cancel rescue nil
-    @timer = nil
-
-    @watchers.each_value {|w| w.stop_watching }
-    @watchers.clear
-  end
-
-  # EventMachine cannot notify us when new files are added to the watched
-  # directory, or when nothing happens to a file. This method finds all
-  # added and stable files and issues events for them.
-  #
-  # This method ONLY looks for new and stable items, even though it could find
-  # the modified and removed, it leaves those for the Watchers.
-  #
-  # This method is run inside a periodic timer in EM.
-  #
-  def notify_added_and_stable
-    return if paused?
-    events = []
-    scan_files.each do |fn, new_stat|
-      if cached_stat = @files[fn] then
-        if stable_event?( cached_stat, new_stat ) then
-          events << ::DirectoryWatcher::Event.new(:stable, fn)
-        elsif modified_event?( cached_stat, new_stat ) then
-          events << ::DirectoryWatcher::Event.new(:modified, fn)
-        end
-      else
-        @files[fn] = watch_file(fn).stat
-        events << ::DirectoryWatcher::Event.new(:added, fn)
-      end
+    EventMachine.next_tick do
+      @timer.cancel rescue nil
+      @timer = nil
     end
-    notify(events)
+
+    EventMachine.next_tick do
+      @watchers.each_value {|w| w.stop_watching }
+      @watchers.clear
+    end
   end
 
   # Make progress towards maximum iterations. And if we get there, then stop
@@ -257,67 +252,39 @@ class DirectoryWatcher::EmScanner < ::DirectoryWatcher::Scanner
     end
   end
 
-  # have we finished the maximum number of iterations we should
-  #
-  def finished_iterations?
-    self.iterations >= self.maximum_iterations
-  end
-
-  # Return whether or not the two stats are the same, and if they are the same
-  # should a stable event be issued.
-  #
-  def stable_event?( cur_stat, new_stat )
-    if cur_stat == new_stat and !cur_stat.stable.nil? then
-      cur_stat.stable -= 1
-      if cur_stat.stable <= 0 then
-        cur_stat.stable = nil
-        return true
-      end
-    end
-    return false
-  end
-
-  # Return whether or not the two stats are different enough to emit a modified
-  # event. In this case we are only checking the mtimes
-  def modified_event?( cur_stat, new_stat )
-    if cur_stat.mtime != new_stat.mtime then
-      cur_stat.mtime = new_stat.mtime
-      return true
-    end
-    return false
-  end
-
   # :stopdoc:
   #
   # This is our tailored implementation of the EventMachine FileWatch class.
   # It receives notifications of file events and provides a mechanism to
-  # translate the EventMachine events into DirectoryWatcher events.
+  # translate the EventMachine events into objects to send to the Scanner that
+  # it is initialized with.
+  #
+  # The Watcher only reponds to modified and deleted events.
   #
   # EM will set the '@path' instance variable after initialization.
   #
   class Watcher < EventMachine::FileWatch
     def initialize( scanner )
       @scanner = scanner
-      @active = true
+      logger.debug "Watcher initialized with Scanner #{@scanner}"
     end
 
     def stat
-      return unless test ?e, @path
-      stat = File.stat @path
-      ::DirectoryWatcher::FileStat.new(stat.mtime, stat.size, @scanner.stable)
+      if test ?e, @path then
+        stat = File.stat @path
+        return ::DirectoryWatcher::FileStat.new(@path, stat.mtime, stat.size)
+      else
+        return ::DirectoryWatcher::FileStat.for_removed_path(@path)
+      end
     end
 
     def file_deleted
-      EventMachine.next_tick do
-        @scanner.delete_file(path)
-      end
+      @scanner.on_removed(stat)
     end
     alias :file_moved :file_deleted
 
     def file_modified
-      EventMachine.next_tick do
-        @scanner.modify_file(path)
-      end
+      @scanner.on_modified(stat)
     end
   end
   # :startdoc:

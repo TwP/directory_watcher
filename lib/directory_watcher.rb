@@ -603,8 +603,8 @@ class DirectoryWatcher
   #
   def run_once
     @scanner.run
-    @collector.run
-    @notifier.run
+    @collector.start unless running?
+    @notifier.start unless running?
     self
   end
 end  # class DirectoryWatcher

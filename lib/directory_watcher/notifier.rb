@@ -1,4 +1,5 @@
-# Notifer pulls items from a queue and sends that item to ever observer
+# Notifer pulls items from a queue and sends that item to ever observer. It will
+# filter the events by the types of events the observer has subscribed too.
 class DirectoryWatcher::Notifier
   include DirectoryWatcher::Threaded
 

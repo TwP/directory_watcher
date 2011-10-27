@@ -21,6 +21,12 @@ class DirectoryWatcher
       sub_path('lib', *args, &block)
     end
 
+    # Return a path relative to the 'root' directory in the project
+    #
+    def path(*args,&block)
+      sub_path('', *args, &block)
+    end
+
     # Calculate the full expanded path of the item with respect to a sub path of
     # 'root_dir'
     def sub_path(sub,*args,&block)

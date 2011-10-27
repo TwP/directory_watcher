@@ -1,12 +1,12 @@
 # ScanAndQueue creates a Scan from its input globs and then sends that Scan to
-# its Queue. 
+# its Queue.
 #
 # Every time scan_and_queue is called a new scan is created an sent to the
-# qeueu.
+# queue.
 class DirectoryWatcher::ScanAndQueue
   def initialize( glob, queue )
     @globs = glob
-    @queue =queue 
+    @queue =queue
   end
 
   # Create and run a Scan and submit it to the Queue.

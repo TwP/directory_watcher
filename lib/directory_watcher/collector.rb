@@ -8,13 +8,13 @@ class DirectoryWatcher::Collector
   # Create a new StatCollector
   #
   # notification_queue - The Queue to submit the Events to the Notifier on
-  # collection_queue   - The Queue to read items from the Scanner on 
+  # collection_queue   - The Queue to read items from the Scanner on
   # options            - A Hash of optional items:
   #                      :stable        - The number of times we see a file hasn't
   #                                       changed before emitting a stable event
   #                      :pre_load_scan - A Scan to use to load our internal
   #                                       state from before. No events will be
-  #                                       emitted for the FileStat's in this
+  #                                       emitted for the FileStat  in this
   #                                       scan.
   #
   def initialize( notification_queue, collection_queue, options = {} )
@@ -49,9 +49,9 @@ class DirectoryWatcher::Collector
 
   # Process a single stat and emit an event if necessary.
   #
-  # stat       - The new FileStat to process and see if an event should 
+  # stat       - The new FileStat to process and see if an event should
   #              be emitted
-  # emit_event - Whether or not an event should be emitted. 
+  # emit_event - Whether or not an event should be emitted.
   #
   # Returns nothing
   def on_stat( stat, emit_event = true )
@@ -138,8 +138,8 @@ class DirectoryWatcher::Collector
   # Should the event given actually be emitted.
   #
   # If the event passed in is NOT a stable event, return true
-  # Otherwise, check to see if the stable count for this stat's path has crossed
-  # the stable threshold, and if it has return true, otherwise return false
+  # If there is a stable_threshold, then check to see if the stable count for
+  # this event's path has crossed the stable threshold.
   #
   # This method has the side effect of updating the stable count of the path of
   # the event. If we are going to return true for the stable event, then we

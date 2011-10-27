@@ -7,11 +7,22 @@ end
 
 if DirectoryWatcher::HAVE_REV
 
+# Deprecated:
+#
 # The RevScanner uses the Rev loop to monitor changes to files in the
 # watched directory. This scanner is more efficient than the pure Ruby
-# scanner because it relies on the operating system kernel notifictions
+# scanner because it relies on the operating system kernel notifications
 # instead of a periodic polling and stat of every file in the watched
 # directory (the technique used by the Scanner class).
+#
+# The RevScanner is essentially the exact same as the CoolioScanner with class
+# names changed and using _rev_loop instead of _coolio_loop. Unfortunately the
+# RevScanner cannot be a sub class of CoolioScanner because of C-extension
+# reasons between the rev and coolio gems
+#
+# Rev cannot notify us when a file is added to the watched
+# directory; therefore, added files are only picked up when we apply the
+# glob pattern to the directory. This is done at the configured interval.
 #
 class DirectoryWatcher::RevScanner < ::DirectoryWatcher::EventableScanner
   # call-seq:
@@ -21,6 +32,9 @@ class DirectoryWatcher::RevScanner < ::DirectoryWatcher::EventableScanner
     super(glob, interval, collection_queue)
   end
 
+  # Called by EventablScanner#start to start the loop up and attach the periodic
+  # timer that will poll the globs for new files.
+  #
   def start_loop_with_attached_scan_timer
     return if @loop_thread
     @timer = ScanTimer.new( self )
@@ -30,6 +44,9 @@ class DirectoryWatcher::RevScanner < ::DirectoryWatcher::EventableScanner
     }
   end
 
+  # Called by EventableScanner#stop to stop the loop as part of the shutdown
+  # process.
+  #
   def stop_loop
     if @loop_thread then
       event_loop.stop rescue nil
@@ -39,6 +56,9 @@ class DirectoryWatcher::RevScanner < ::DirectoryWatcher::EventableScanner
   end
 
   # Return the rev loop object
+  #
+  # This is used during the startup, shutdown process and for the Watcher to
+  # attach and detach from the event loop
   #
   def event_loop
     if @loop_thread then
@@ -69,8 +89,9 @@ class DirectoryWatcher::RevScanner < ::DirectoryWatcher::EventableScanner
       attach(scanner.event_loop)
     end
 
-    # rev uses on_change so we convert that to the appropriate
-    # EventableScanner calls.
+    # Rev uses on_change so we convert that to the appropriate
+    # EventableScanner calls. Unlike Coolio, Rev's on_change() takes no
+    # parameters
     #
     def on_change
       if File.exist?(path) then
@@ -82,7 +103,7 @@ class DirectoryWatcher::RevScanner < ::DirectoryWatcher::EventableScanner
     end
   end
 
-  # Periodically execute a Scan.
+  # Periodically execute a Scan. Hook this into the EventableScanner#on_scan
   #
   class ScanTimer< Rev::TimerWatcher
     def initialize( scanner )

@@ -1,6 +1,7 @@
 # An Eventable Scanner is one that can be utilized by something that has an
-# Event Loop.
-# 
+# Event Loop. It is intended to be subclassed by classes that implement the
+# specific event loop semantics for say EventMachine or Cool.io.
+#
 # The Events that the EventableScanner is programmed for are:
 #
 # on_scan     - this should be called every +interval+ times
@@ -8,8 +9,28 @@
 #               be called when the file is modified
 # on_removed  - Similar to on_modified but called when a file is removed.
 #
+# Sub classes are required to implement the following:
+#
+#   start_loop_with_attached_scan_timer() - Instance Method
+#     This method is to start up the loop, if necessary assign to @loop_thread
+#     instance variable the Thread that is controlling the event loop.
+#
+#     This method must also assign an object to @timer which is what does the
+#     periodic scanning of the globs. This object must respond to +detach()+ so
+#     that it may be detached from the event loop.
+#
+#   stop_loop() - Instance Method
+#     This method must shut down the event loop, or detach these classes from
+#     the event loop if we just attached to an existing event loop.
+#
+#   Watcher - An Embedded class
+#     This is a class that must have a class method +watcher(path,scanner)+
+#     which is used to instantiate a file watcher. The Watcher instance must
+#     respond to +detach()+ so that it may be independently detached from the
+#     event loop.
+#
 class DirectoryWatcher::EventableScanner
-  # This is how often +on_scan+ should be called
+  # This is how often +on_scan+ should be called, in seconds
   attr_reader :interval
 
   # A Hash of Watcher objects.
@@ -17,6 +38,10 @@ class DirectoryWatcher::EventableScanner
 
   # call-seq:
   #    EventableScanner.new( glob, interval, collection_queue )
+  #
+  # glob              - The array of globs to scan for
+  # interval          - The interval (seconds) at which to scan
+  # collection_queue  - The Queue to put items on for the Collector to process.
   #
   def initialize( glob, interval, collection_queue )
     @scan_and_queue = DirectoryWatcher::ScanAndQueue.new(glob, collection_queue)
@@ -37,12 +62,16 @@ class DirectoryWatcher::EventableScanner
     return false
   end
 
+  # Start up the scanner. If the scanner is already running, nothing happens.
+  #
   def start
     return if running?
     logger.debug "starting"
     start_loop_with_attached_scan_timer
   end
 
+  # Stop the scanner. If the scanner is not running, nothing happens.
+  #
   def stop
     return unless running?
     logger.debug "stopting"
@@ -52,24 +81,38 @@ class DirectoryWatcher::EventableScanner
     stop_loop
   end
 
+  # Pause the scanner.
+  #
+  # Pausing the scanner does not stop the scanning per se, it stops items from
+  # being sent to the collection queue
+  #
   def pause
     logger.debug "pausing"
     @paused = true
   end
 
+  # Resume the scanner.
+  #
+  # This removes the blockage on sending items to the collection queue.
+  #
   def resume
     logger.debug "resuming"
     @paused = false
   end
 
+  # Is the Scanner currently paused.
+  #
   def paused?
     @paused
   end
 
-  # Eventable Scanners do not join
+  # EventableScanners do not join
+  #
   def join( limit = nil )
   end
 
+  # Do a single scan and send those items to the collection queue.
+  #
   def run
     @scan_and_queue.scan_and_queue
   end
@@ -104,7 +147,7 @@ class DirectoryWatcher::EventableScanner
     progress_towards_maximum_iterations
   end
 
-  # This callback is invoked by the Watcher instance when it is triggered by teh
+  # This callback is invoked by the Watcher instance when it is triggered by the
   # loop for file modifications.
   #
   def on_modified(watcher, new_stat)
@@ -118,7 +161,6 @@ class DirectoryWatcher::EventableScanner
     unwatch_file(watcher.path)
     queue_item(new_stat)
   end
-
 
   #######
   private
@@ -135,6 +177,9 @@ class DirectoryWatcher::EventableScanner
   end
 
 
+  # Run a single scan and turn on watches for all the files found in that scan
+  # that do not already have watchers on them.
+  #
   def scan_and_watch_files
     scan = @scan_and_queue.scan_and_queue
     scan.results.each do |stat|
@@ -142,7 +187,8 @@ class DirectoryWatcher::EventableScanner
     end
   end
 
-  # remove the timer and the watches from the event loop
+  # Remove the timer and the watches from the event loop
+  #
   def teardown_timer_and_watches
     @timer.detach rescue nil
     @timer = nil
@@ -150,7 +196,6 @@ class DirectoryWatcher::EventableScanner
     @watchers.each_value {|w| w.detach}
     @watchers.clear
   end
-
 
   # Create and return a new Watcher instance for the given filename _fn_.
   #

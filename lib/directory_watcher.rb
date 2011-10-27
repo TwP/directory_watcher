@@ -472,7 +472,7 @@ class DirectoryWatcher
   # Start the directory watcher scanning thread. If the directory watcher is
   # already running, this method will return without taking any action.
   #
-  # Start returns one the scanner and the notifer say they are running
+  # Start returns one the scanner and the notifier say they are running
   #
   def start
     logger.debug "start (running -> #{running?})"

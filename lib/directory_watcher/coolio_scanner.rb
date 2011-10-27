@@ -9,9 +9,13 @@ if DirectoryWatcher::HAVE_COOLIO
 
 # The CoolioScanner uses the Coolio loop to monitor changes to files in the
 # watched directory. This scanner is more efficient than the pure Ruby
-# scanner because it relies on the operating system kernel notifictions
+# scanner because it relies on the operating system kernel notifications
 # instead of a periodic polling and stat of every file in the watched
 # directory (the technique used by the Scanner class).
+#
+# Coolio cannot notify us when a file is added to the watched
+# directory; therefore, added files are only picked up when we apply the
+# glob pattern to the directory. This is done at the configured interval.
 #
 class DirectoryWatcher::CoolioScanner < DirectoryWatcher::EventableScanner
   # call-seq:
@@ -21,6 +25,9 @@ class DirectoryWatcher::CoolioScanner < DirectoryWatcher::EventableScanner
     super(glob, interval, collection_queue)
   end
 
+  # Called by EventablScanner#start to start the loop up and attach the periodic
+  # timer that will poll the globs for new files.
+  #
   def start_loop_with_attached_scan_timer
     return if @loop_thread
     @timer = ScanTimer.new( self )
@@ -30,6 +37,9 @@ class DirectoryWatcher::CoolioScanner < DirectoryWatcher::EventableScanner
     }
   end
 
+  # Called by EventableScanner#stop to stop the loop as part of the shutdown
+  # process.
+  #
   def stop_loop
     if @loop_thread then
       event_loop.stop rescue nil
@@ -38,8 +48,10 @@ class DirectoryWatcher::CoolioScanner < DirectoryWatcher::EventableScanner
     end
   end
 
+  # Return the cool.io loop object.
   #
-  # Return the cool.io loop object
+  # This is used during the startup, shutdown process and for the Watcher to
+  # attach and detach from the event loop
   #
   def event_loop
     if @loop_thread then
@@ -53,8 +65,11 @@ class DirectoryWatcher::CoolioScanner < DirectoryWatcher::EventableScanner
   #
   # Watch files using the Coolio StatWatcher.
   #
+  # This class is required by EventableScanner to institute file watching.
+  #
   # The coolio +on_change+ callback is converted to the appropriate +on_removed+
   # and +on_modified+ callbacks for the EventableScanner.
+  #
   class Watcher < Coolio::StatWatcher
     def self.watch(fn, scanner )
       new(fn, scanner)
@@ -82,7 +97,7 @@ class DirectoryWatcher::CoolioScanner < DirectoryWatcher::EventableScanner
     end
   end
 
-  # Periodically execute a Scan.
+  # Periodically execute a Scan. Hook this into the EventableScanner#on_scan
   #
   class ScanTimer< Coolio::TimerWatcher
     def initialize( scanner )

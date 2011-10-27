@@ -6,7 +6,7 @@ class DirectoryWatcher
     # The root directory of the project is considered the parent directory of
     # the 'lib' directory.
     #
-    # Returns The full expandeded path of the parent directory of 'lib' going up
+    # Returns The full expanded path of the parent directory of 'lib' going up
     # the path from the current file. Trailing File::SEPARATOR is guaranteed
     #
     def root_dir
@@ -29,6 +29,7 @@ class DirectoryWatcher
 
     # Calculate the full expanded path of the item with respect to a sub path of
     # 'root_dir'
+    #
     def sub_path(sub,*args,&block)
       rv = ::File.join(root_dir, sub) + ::File::SEPARATOR
       rv = ::File.join(rv, *args) if args

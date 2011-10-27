@@ -14,7 +14,7 @@ class DirectoryWatcher::Scanner
   #
   # glob             - Same as that in DirectoryWatcher
   # interval         - Same as that in DirectoryWatcher
-  # collection_queue - The Queue to send the Scans too. 
+  # collection_queue - The Queue to send the Scans too.
   #                    the other end of this queue is connected to a Collector
   #
   # Generally all of them are required. The Scanner is not generally used out

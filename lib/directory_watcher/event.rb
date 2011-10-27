@@ -38,22 +38,32 @@ class DirectoryWatcher::Event
     @path = path
   end
 
+  # Is the event a modified event.
+  #
   def modified?
     type == :modified
   end
 
+  # Is the event an added event.
+  #
   def added?
     type == :added
   end
 
+  # Is the event a removed event.
+  #
   def removed?
     type == :removed
   end
 
+  # Is the event a stable event.
+  #
   def stable?
     type == :stable
   end
 
+  # Convert the Event to a nice string format
+  #
   def to_s( )
     "<#{self.class} type: #{type} path: '#{path}'>"
   end

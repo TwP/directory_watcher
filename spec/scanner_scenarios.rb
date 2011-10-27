@@ -1,5 +1,3 @@
-require 'spec_helper'
-
 shared_examples_for "Scanner" do
   context "Event Types"do
     it "sends added events" do
@@ -122,7 +120,7 @@ shared_examples_for "Scanner" do
   context "running?" do
     it "is true when the watcher is running" do
       directory_watcher.start
-      directory_watcher.running?.should == true
+      directory_watcher.running?.should be_true
       directory_watcher.stop
     end
 

@@ -1,7 +1,12 @@
-# Notifer pulls items from a queue and sends that item to ever observer
+# A Notifier pull Event instances from the give queue and sends them to all of
+# the Observers it knows about.
+#
 class DirectoryWatcher::Notifier
   include DirectoryWatcher::Threaded
 
+  # Create a new Notifier that pulls events off the given queue and sends them
+  # to the listed observers.
+  #
   def initialize( queue, observers )
     @queue = queue
     @observers = observers
@@ -28,10 +33,12 @@ class DirectoryWatcher::Notifier
   private
   #######
 
+  # Send the given event to the given observer using the given function.
+  #
+  # Capture any exceptions that have, swallow them and send them to stderr.
   def send_event_to_observer( observer, func, event )
     observer.send(func, event)
   rescue Exception => e
     $stderr.puts "Called #{observer}##{func}(#{event}) and all I got was this lousy exception #{e}"
   end
-
 end

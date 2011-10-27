@@ -8,9 +8,10 @@ end
 
 describe "Scanners" do
   [ nil, :em, :coolio ].each do |scanner|
+#  [ :rev ].each do |scanner|
     context "#{scanner} Scanner" do
 
-      let( :default_options       ) { { :glob => "**/*", :interval => 0.01 }                     }
+      let( :default_options       ) { { :glob => "**/*", :interval => 0.05}                      }
       let( :options               ) { default_options.merge( :scanner => scanner )               }
       let( :options_with_pre_load ) { options.merge( :pre_load => true )                         }
       let( :options_with_stable   ) { options.merge( :stable => 2 )                              }

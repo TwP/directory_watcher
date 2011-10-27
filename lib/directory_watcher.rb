@@ -221,76 +221,31 @@ require 'yaml'
 #
 # Tim Pease
 #
+require 'directory_watcher/paths'
+require 'directory_watcher/version'
+require 'directory_watcher/file_stat'
+require 'directory_watcher/scan'
+require 'directory_watcher/event'
+require 'directory_watcher/threaded'
+require 'directory_watcher/collector'
+require 'directory_watcher/notifier'
+require 'directory_watcher/scan_and_queue'
 class DirectoryWatcher
 
-  # An +Event+ structure contains the _type_ of the event and the file _path_
-  # to which the event pertains. The type can be one of the following:
-  #
-  #    :added      =>  file has been added to the directory
-  #    :modified   =>  file has been modified (either mtime or size or both
-  #                    have changed)
-  #    :removed    =>  file has been removed from the directory
-  #    :stable     =>  file has stabilized since being added or modified
-  #
-  Event = Struct.new(:type, :path) {
-    def to_s( ) "#{type} '#{path}'" end
-  }
+  extend Paths
+  extend Version
 
-  # :stopdoc:
-  # A persistable file stat structure used internally by the directory
-  # watcher.
-  #
-  FileStat = Struct.new(:mtime, :size, :stable) {
-    def eql?( other )
-      return false unless other.instance_of? FileStat
-      self.mtime == other.mtime and self.size == other.size
-    end
-    alias :== :eql?
-  }
+  def self.default_options
+    {
+      :glob     => '*',
+      :interval => 30.0,
+      :stable   => nil,
+      :pre_load => false,
+      :persist  => nil,
+      :scanner  => nil
+    }
 
-  LIBPATH = ::File.expand_path(::File.dirname(__FILE__)) + ::File::SEPARATOR
-  PATH = ::File.dirname(LIBPATH) + ::File::SEPARATOR
-  # :startdoc:
-
-  # Returns the version string for the library.
-  #
-  def self.version
-    @version ||= File.read(path('version.txt')).strip
   end
-
-  # Returns the library path for the module. If any arguments are given,
-  # they will be joined to the end of the libray path using
-  # <tt>File.join</tt>.
-  #
-  def self.libpath( *args, &block )
-    rv =  args.empty? ? LIBPATH : ::File.join(LIBPATH, args.flatten)
-    if block
-      begin
-        $LOAD_PATH.unshift LIBPATH
-        rv = block.call
-      ensure
-        $LOAD_PATH.shift
-      end
-    end
-    return rv
-  end
-
-  # Returns the lpath for the module. If any arguments are given, they
-  # will be joined to the end of the path using <tt>File.join</tt>.
-  #
-  def self.path( *args, &block )
-    rv = args.empty? ? PATH : ::File.join(PATH, args.flatten)
-    if block
-      begin
-        $LOAD_PATH.unshift PATH
-        rv = block.call
-      ensure
-        $LOAD_PATH.shift
-      end
-    end
-    return rv
-  end
-
   # call-seq:
   #    DirectoryWatcher.new( directory, options )
   #
@@ -321,27 +276,52 @@ class DirectoryWatcher
   def initialize( directory, opts = {} )
     @dir = directory
     @observer_peers = {}
-
-    if Kernel.test(?e, @dir)
-      unless Kernel.test(?d, @dir)
-        raise ArgumentError, "'#{@dir}' is not a directory"
-      end
-    else
-      Dir.mkdir @dir
-    end
-
-    @event_queue = opts[:event_queue] = Queue.new
+    @event_queue = Queue.new
+    @collection_queue = Queue.new
     @notifier = Notifier.new(@event_queue, @observer_peers)
 
-    klass = opts[:scanner].to_s.capitalize + 'Scanner'
-    klass = DirectoryWatcher.const_get klass rescue Scanner
-    @scanner = klass.new( opts )
+    setup_dir(@dir)
 
-    self.glob = opts[:glob] || '*'
-    self.interval = opts[:interval] || 30
-    self.stable = opts[:stable] || nil
-    self.persist = opts[:persist]
+    opts = DirectoryWatcher.default_options.merge( opts )
+
+    @preloading = opts.delete(:pre_load)
+    @scanner_class = scanner_class(opts.delete(:scanner))
+
+    opts.each do |key, val|
+      self.send( "#{key}=", val )
+    end
+
+
+    collector_opts = { :stable => opts[:stable] }
+    collector_opts[:pre_load_scan] = Scan.new( glob ) if preloading?
+    @collector = Collector.new(@event_queue, @collection_queue, collector_opts )
+    @scanner = @scanner_class.new( glob, interval, @collection_queue )
   end
+
+  def preloading?
+    @preloading
+  end
+
+  def scanner_class( symbol )
+    class_name = symbol.to_s.capitalize + 'Scanner'
+    klass = DirectoryWatcher.const_get( class_name ) rescue Scanner
+  end
+
+  # Setup the directory existence.
+  #
+  # Raise an error if the item passed in does exist but is not a directory
+  #
+  # Returns nothing
+  def setup_dir( dir )
+    if Kernel.test(?e, dir)
+      unless Kernel.test(?d, dir)
+        raise ArgumentError, "'#{dir}' is not a directory"
+      end
+    else
+      Dir.mkdir dir
+    end
+  end
+
 
   # call-seq:
   #    add_observer( observer, func = :update )
@@ -406,14 +386,9 @@ class DirectoryWatcher
                    'expecting a glob pattern or an array of glob patterns')
            end
     glob.uniq!
-    @scanner.glob = glob
+    @glob = glob
   end
-
-  # Returns the array of glob patterns used to monitor files in the directory.
-  #
-  def glob
-    @scanner.glob
-  end
+  attr_reader :glob
 
   # Sets the directory scan interval. The directory will be scanned every
   # _interval_ seconds for changes to files matching the glob pattern.
@@ -422,14 +397,9 @@ class DirectoryWatcher
   def interval=( val )
     val = Float(val)
     raise ArgumentError, "interval must be greater than zero" if val <= 0
-    @scanner.interval = val
+    @interval = val
   end
-
-  # Returns the directory scan interval in seconds.
-  #
-  def interval
-    @scanner.interval
-  end
+  attr_reader :interval
 
   # Sets the number of intervals a file must remain unchanged before it is
   # considered "stable". When this condition is met, a stable event is
@@ -453,21 +423,15 @@ class DirectoryWatcher
   #
   def stable=( val )
     if val.nil?
-      @scanner.stable = nil
-      return
+      @stable = nil
+    else
+      val = Integer(val)
+      raise ArgumentError, "stable must be greater than zero" if val <= 0
+      @stable = val
     end
-
-    val = Integer(val)
-    raise ArgumentError, "stable must be greater than zero" if val <= 0
-    @scanner.stable = val
+    return @stable
   end
-
-  # Returs the number of intervals a file must remain unchanged before it is
-  # considered "stable".
-  #
-  def stable
-    @scanner.stable
-  end
+  attr_reader :stable
 
   # Sets the name of the file to which the directory watcher state will be
   # persisted when it is stopped. Setting the persist filename to +nil+ will
@@ -484,7 +448,7 @@ class DirectoryWatcher
   #
   def persist!
     return if running?
-    File.open(@persist, 'w') {|fd| fd.write YAML.dump(@scanner.files)} if @persist
+    File.open(@persist, 'w') { |fd| @collector.dump_stats(fd) } if @persist
     self
   end
 
@@ -494,7 +458,7 @@ class DirectoryWatcher
   #
   def load!
     return if running?
-    @scanner.files = YAML.load_file(@persist) if @persist and test(?f, @persist)
+    File.open(@persist, 'r') { |fd| @collector.load_stats(fd) } if @persist and test(?f, @persist)
     self
   end
 
@@ -508,20 +472,25 @@ class DirectoryWatcher
   # Start the directory watcher scanning thread. If the directory watcher is
   # already running, this method will return without taking any action.
   #
-  # Start returns one the scanner and the notifer say they are running
+  # Start returns one the scanner and the notifier say they are running
   #
   def start
     logger.debug "start (running -> #{running?})"
     return self if running?
 
     load!
+    logger.debug "starting notifier"
+    @notifier.start
+    Thread.pass until @notifier.running?
+
+    logger.debug "starting collector"
+    @collector.start
+    Thread.pass until @collector.running?
+
     logger.debug "starting scanner"
     @scanner.start
     Thread.pass until @scanner.running?
 
-    logger.debug "starting notifier"
-    @notifier.start
-    Thread.pass until @notifier.running?
     self
   end
 
@@ -542,14 +511,18 @@ class DirectoryWatcher
   #
   # Stop returns once the scanner and notifier say they are no longer running
   def stop
-    logger.debug "stop (running -> #{running?})"
+    logger.info "stop (running -> #{running?})"
     return self unless running?
 
-    logger.debug "stopping scanner"
+    logger.info"stopping scanner"
     @scanner.stop
     Thread.pass while @scanner.running?
 
-    logger.debug "stopping notifier"
+    logger.info"stopping collector"
+    @collector.stop
+    Thread.pass while @collector.running?
+
+    logger.info"stopping notifier"
     @notifier.stop
     Thread.pass while @notifier.running?
 
@@ -565,11 +538,10 @@ class DirectoryWatcher
       value = Integer(value)
       raise ArgumentError, "maximum scans must be >= 1" unless value >= 1
     end
-
     @scanner.maximum_iterations = value
   end
 
-  # Returns the maximum number of scans of the directory watcher
+  # Returns the maximum number of scans the directory scanner will perform
   #
   def maximum_scans
     @scanner.maximum_iterations
@@ -631,15 +603,15 @@ class DirectoryWatcher
   #
   def run_once
     @scanner.run
-    @notifier.run
+    @collector.start unless running?
+    @notifier.start unless running?
     self
   end
 end  # class DirectoryWatcher
 
-DirectoryWatcher.libpath {
-  require 'directory_watcher/threaded'
-  require 'directory_watcher/notifier'
+DirectoryWatcher.lib_path {
   require 'directory_watcher/scanner'
+  require 'directory_watcher/eventable_scanner'
   require 'directory_watcher/coolio_scanner'
   require 'directory_watcher/em_scanner'
   require 'directory_watcher/rev_scanner'

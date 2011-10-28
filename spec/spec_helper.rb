@@ -14,7 +14,7 @@ module DirectoryWatcherSpecs::Helpers
     File.join( @scratch_dir, *parts )
   end
 
-  # NOTE : touch will only work on *nix/BSD style sytems
+  # NOTE : touch will only work on *nix/BSD style systems
   # Touch the file with the given timestamp
   def touch( fname, time = Time.now )
     stamp = time.strftime("%Y%m%d%H%M.%S")

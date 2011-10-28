@@ -35,10 +35,10 @@ end
 #
 class DirectoryWatcher::EmScanner < DirectoryWatcher::EventableScanner
   # call-seq:
-  #    EmScanner.new( glob, interval, collection_queue )
+  #    EmScanner.new( configuration )
   #
-  def initialize( glob, interval, collection_queue )
-    super(glob, interval, collection_queue)
+  def initialize( config )
+    super(config)
   end
 
   # Called by EventablScanner#start to start the loop up and attach the periodic

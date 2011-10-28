@@ -30,9 +30,6 @@
 #     event loop.
 #
 class DirectoryWatcher::EventableScanner
-  # This is how often +on_scan+ should be called, in seconds
-  attr_reader :interval
-
   # A Hash of Watcher objects.
   attr_reader :watchers
 
@@ -43,15 +40,27 @@ class DirectoryWatcher::EventableScanner
   # interval          - The interval (seconds) at which to scan
   # collection_queue  - The Queue to put items on for the Collector to process.
   #
-  def initialize( glob, interval, collection_queue )
-    @scan_and_queue = DirectoryWatcher::ScanAndQueue.new(glob, collection_queue)
-    @collection_queue = collection_queue
-    @interval = interval
+  #def initialize( glob, interval, collection_queue )
+  def initialize( config )
+    @config = config
+    @scan_and_queue = DirectoryWatcher::ScanAndQueue.new(config.glob, config.collection_queue)
     @watchers = {}
     @stopping = false
     @timer = nil
     @loop_thread = nil
     @paused = false
+  end
+
+  # The queue on which to put FileStat and Scan items.
+  #
+  def collection_queue
+    @config.collection_queue
+  end
+
+  # The interval at which to scan
+  #
+  def interval
+    @config.interval
   end
 
   # Returns +true+ if the scanner is currently running. Returns +false+ if
@@ -172,7 +181,7 @@ class DirectoryWatcher::EventableScanner
     if paused? then
       logger.debug "Not queueing item, we're paused"
     else
-      @collection_queue.enq item
+      collection_queue.enq item
     end
   end
 

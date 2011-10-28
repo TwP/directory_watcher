@@ -21,8 +21,8 @@ class DirectoryWatcher::CoolioScanner < DirectoryWatcher::EventableScanner
   # call-seq:
   #    CoolioScanner.new( glob, interval, collection_queue )
   #
-  def initialize( glob, interval, collection_queue )
-    super(glob, interval, collection_queue)
+  def initialize( config )
+    super(config)
   end
 
   # Called by EventablScanner#start to start the loop up and attach the periodic

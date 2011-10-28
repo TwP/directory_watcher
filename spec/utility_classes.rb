@@ -100,11 +100,11 @@ module DirectoryWatcherSpecs
     end
 
     def wait_for_scan_count( limit )
-      @watcher.maximum_scans = limit
+      @watcher.maximum_iterations = limit
       #Thread.pass until @watcher.finished_scans?
       until @watcher.finished_scans?
         sleep(0.01)
-        logger.debug "Waiting for scan count #{limit} got #{@watcher.scans} #{@watcher.maximum_scans}"
+        logger.debug "Waiting for scan count #{limit} got #{@watcher.scans} #{@watcher.maximum_iterations}"
       end
     end
 

@@ -4,11 +4,11 @@
 class DirectoryWatcher::Notifier
   include DirectoryWatcher::Threaded
 
-  # Create a new Notifier that pulls events off the given queue and sends them
-  # to the listed observers.
+  # Create a new Notifier that pulls events off the given notification_queue from the
+  # config, and sends them to the listed observers.
   #
-  def initialize( queue, observers )
-    @queue = queue
+  def initialize( config, observers )
+    @config = config
     @observers = observers
     self.interval = 0.01 # yes this is a fast loop
   end
@@ -19,8 +19,8 @@ class DirectoryWatcher::Notifier
   #
   def run
     previous_event = nil
-    until @queue.empty? do
-      event = @queue.deq
+    until queue.empty? do
+      event = queue.deq
       next if previous_event == event
       @observers.each do |observer, func|
         send_event_to_observer( observer, func, event )
@@ -32,6 +32,10 @@ class DirectoryWatcher::Notifier
   #######
   private
   #######
+
+  def queue
+    @config.notification_queue
+  end
 
   # Send the given event to the given observer using the given function.
   #

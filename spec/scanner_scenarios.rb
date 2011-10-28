@@ -87,7 +87,7 @@ shared_examples_for "Scanner" do
     end
   end
 
-  context "preload option " do
+  context "pre_load option " do
     it "skips initial add events" do
       modified_file = scratch_path( 'modified' )
       touch( modified_file, Time.now - 5 )

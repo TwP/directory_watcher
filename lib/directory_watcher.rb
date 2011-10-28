@@ -174,7 +174,7 @@ require 'yaml'
 # may be doing a large pass over the monitored locations, many events may be
 # generated all at once. In the default case, these will be emitted in the order
 # in which they are observed, which tends to be alphabetical, but it not
-# guaranteed. If you wish the events to be orderd by modified time, or file size
+# guaranteed. If you wish the events to be order by modified time, or file size
 # this may be done by setting the +sort_by+ and/or the +order_by+ options.
 #
 #    dw = DirectoryWatcher.new '.', :glob => '**/*.rb', :sort_by => :mtime
@@ -238,6 +238,7 @@ require 'yaml'
 #
 require 'directory_watcher/paths'
 require 'directory_watcher/version'
+require 'directory_watcher/configuration'
 require 'directory_watcher/file_stat'
 require 'directory_watcher/scan'
 require 'directory_watcher/event'
@@ -250,17 +251,9 @@ class DirectoryWatcher
   extend Paths
   extend Version
 
-  def self.default_options
-    {
-      :glob     => '*',
-      :interval => 30.0,
-      :stable   => nil,
-      :pre_load => false,
-      :persist  => nil,
-      :scanner  => nil
-    }
+  # access the configuration of the DirectoryWatcher
+  attr_reader :config
 
-  end
   # call-seq:
   #    DirectoryWatcher.new( directory, options )
   #
@@ -297,42 +290,18 @@ class DirectoryWatcher
   # Setting the :stable option to +nil+ will prevent stable events from being
   # generated.
   #
+  # Additional information about the available options is documented in the
+  # Configuration class.
+  #
   def initialize( directory, opts = {} )
-    @dir = directory
     @observer_peers = {}
-    @event_queue = Queue.new
-    @collection_queue = Queue.new
-    @notifier = Notifier.new(@event_queue, @observer_peers)
+    @config = Configuration.new( opts.merge( :dir => directory ) )
 
-    setup_dir(@dir)
+    setup_dir(config.dir)
 
-    opts = DirectoryWatcher.default_options.merge( opts )
-
-    @preloading = opts.delete(:pre_load)
-    @scanner_class = scanner_class(opts.delete(:scanner))
-    @sort_by = opts.delete(:sort_by) || :path
-    @order_by = opts.delete(:order_by) || :ascending
-
-    opts.each do |key, val|
-      self.send( "#{key}=", val )
-    end
-
-    collector_opts = { :stable => opts[:stable],
-                       :sort_by => @sort_by,
-                       :order_by => @order_by }
-
-    collector_opts[:pre_load_scan] = Scan.new( glob ) if preloading?
-    @collector = Collector.new(@event_queue, @collection_queue, collector_opts )
-    @scanner = @scanner_class.new( glob, interval, @collection_queue )
-  end
-
-  def preloading?
-    @preloading
-  end
-
-  def scanner_class( symbol )
-    class_name = symbol.to_s.capitalize + 'Scanner'
-    klass = DirectoryWatcher.const_get( class_name ) rescue Scanner
+    @notifier = Notifier.new(config, @observer_peers)
+    @collector = Collector.new(config)
+    @scanner = config.scanner_class.new(config)
   end
 
   # Setup the directory existence.
@@ -398,7 +367,7 @@ class DirectoryWatcher
     @observer_peers.size
   end
 
-  # call-seq:
+   # call-seq:
   #    glob = '*'
   #    glob = ['lib/**/*.rb', 'test/**/*.rb']
   #
@@ -406,28 +375,22 @@ class DirectoryWatcher
   # files. A single glob pattern can be given or an array of glob patterns.
   #
   def glob=( val )
-    glob = case val
-           when String; [File.join(@dir, val)]
-           when Array; val.flatten.map! {|g| File.join(@dir, g)}
-           else
-             raise(ArgumentError,
-                   'expecting a glob pattern or an array of glob patterns')
-           end
-    glob.uniq!
-    @glob = glob
+    config.glob = val
   end
-  attr_reader :glob
+  def glob
+    config.glob
+  end
 
   # Sets the directory scan interval. The directory will be scanned every
   # _interval_ seconds for changes to files matching the glob pattern.
   # Raises +ArgumentError+ if the interval is zero or negative.
   #
   def interval=( val )
-    val = Float(val)
-    raise ArgumentError, "interval must be greater than zero" if val <= 0
-    @interval = val
+    config.interval = val
   end
-  attr_reader :interval
+  def interval
+    config.interval
+  end
 
   # Sets the number of intervals a file must remain unchanged before it is
   # considered "stable". When this condition is met, a stable event is
@@ -450,25 +413,22 @@ class DirectoryWatcher
   # time is 60 seconds (15.0 * 4).
   #
   def stable=( val )
-    if val.nil?
-      @stable = nil
-    else
-      val = Integer(val)
-      raise ArgumentError, "stable must be greater than zero" if val <= 0
-      @stable = val
-    end
-    return @stable
+    config.stable = val
   end
-  attr_reader :stable
+  def stable
+    config.stable
+  end
 
   # Sets the name of the file to which the directory watcher state will be
   # persisted when it is stopped. Setting the persist filename to +nil+ will
   # disable this feature.
   #
   def persist=( filename )
-    @persist = filename ? filename.to_s : nil
+    config.persist = filename
   end
-  attr_reader :persist
+  def persist
+    config.persist
+  end
 
   # Write the current state of the directory watcher to the persist file.
   # This method will do nothing if the directory watcher is running or if
@@ -476,8 +436,14 @@ class DirectoryWatcher
   #
   def persist!
     return if running?
-    File.open(@persist, 'w') { |fd| @collector.dump_stats(fd) } if @persist
+    File.open(persist, 'w') { |fd| @collector.dump_stats(fd) } if persist?
     self
+  end
+
+  # Is persistence done on this DirectoryWatcher
+  #
+  def persist?
+    config.persist
   end
 
   # Loads the state of the directory watcher from the persist file. This
@@ -486,7 +452,7 @@ class DirectoryWatcher
   #
   def load!
     return if running?
-    File.open(@persist, 'r') { |fd| @collector.load_stats(fd) } if @persist and test(?f, @persist)
+    File.open(persist, 'r') { |fd| @collector.load_stats(fd) } if persist? and test(?f, persist)
     self
   end
 
@@ -561,17 +527,13 @@ class DirectoryWatcher
 
   # Sets the maximum number of scans the scanner is to make on the directory
   #
-  def maximum_scans=( value )
-    unless value.nil?
-      value = Integer(value)
-      raise ArgumentError, "maximum scans must be >= 1" unless value >= 1
-    end
+  def maximum_iterations=( value )
     @scanner.maximum_iterations = value
   end
 
   # Returns the maximum number of scans the directory scanner will perform
   #
-  def maximum_scans
+  def maximum_iterations
     @scanner.maximum_iterations
   end
 
@@ -587,7 +549,7 @@ class DirectoryWatcher
   # Returns true if the maximum number of scans has been reached.
   #
   def finished_scans?
-    return true if maximum_scans and (scans >= maximum_scans)
+    return true if maximum_iterations and (scans >= maximum_iterations)
     return false
   end
 
@@ -605,7 +567,7 @@ class DirectoryWatcher
     was_running = @scanner.running?
 
     stop if was_running
-    File.delete(@persist) if @persist and test(?f, @persist)
+    File.delete(config.persist) if persist? and test(?f, config.persist)
     @scanner.reset pre_load
     start if was_running
     self

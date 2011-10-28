@@ -10,19 +10,23 @@
 class DirectoryWatcher::Scanner
   include DirectoryWatcher::Threaded
   # call-seq:
-  #    Scanner.new( glob, interval, collection_queue )
+  #    Scanner.new( configuration )
+  #
+  # From the Configuration instance passed in Scanner uses:
   #
   # glob             - Same as that in DirectoryWatcher
   # interval         - Same as that in DirectoryWatcher
   # collection_queue - The Queue to send the Scans too.
   #                    the other end of this queue is connected to a Collector
   #
-  # Generally all of them are required. The Scanner is not generally used out
-  # side of a DirectoryWatcher so this is more of an internal API
+  # The Scanner is not generally used out side of a DirectoryWatcher so this is 
+  # more of an internal API
   #
-  def initialize( glob, interval, collection_queue )
-    @scan_and_queue = ::DirectoryWatcher::ScanAndQueue.new( glob, collection_queue )
-    self.interval = interval
+  #def initialize( glob, interval, collection_queue )
+  def initialize( config )
+    @config = config
+    @scan_and_queue = ::DirectoryWatcher::ScanAndQueue.new( @config.glob, @config.collection_queue )
+    self.interval = config.interval
   end
 
   # Performs exactly one scan of the directory for file changes and send the

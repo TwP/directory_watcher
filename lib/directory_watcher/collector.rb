@@ -5,28 +5,57 @@ require 'set'
 class DirectoryWatcher::Collector
   include DirectoryWatcher::Threaded
 
-  # Create a new StatCollector
+  # Create a new StatCollector from the given Configuration, and an optional
+  # Scan.
   #
-  # notification_queue - The Queue to submit the Events to the Notifier on
-  # collection_queue   - The Queue to read items from the Scanner on
-  # options            - A Hash of optional items:
-  #                      :stable        - The number of times we see a file hasn't
-  #                                       changed before emitting a stable event
-  #                      :pre_load_scan - A Scan to use to load our internal
-  #                                       state from before. No events will be
-  #                                       emitted for the FileStat  in this
-  #                                       scan.
+  # configuration - The Collector uses from Configuration:
+  #   collection_queue   - The Queue to read items from the Scanner on
+  #   notification_queue - The Queue to submit the Events to the Notifier on
+  #   stable             - The number of times we see a file hasn't changed before 
+  #                        emitting a stable event
+  #   sort_by            - the method used to sort events during on_scan results
+  #   order_by           - The method used to order events from call to on_scan
   #
-  def initialize( notification_queue, collection_queue, options = {} )
-    @notification_queue = notification_queue
-    @collection_queue = collection_queue
+  # pre_load_scan - A Scan to use to load our internal state from before. No
+  #                 events will be emitted for the FileStat's in this scan.
+  #
+  #def initialize( notification_queue, collection_queue, options = {} )
+  def initialize( config )
     @stats = Hash.new
-    @stable_threshold = options[:stable]
     @stable_counts = Hash.new(0)
-    @sort_by = options[:sort_by]
-    @order_by = options[:order_by]
-    on_scan( options.fetch(:pre_load_scan, DirectoryWatcher::Scan.new ), false )
+    @config = config
+    on_scan( DirectoryWatcher::Scan.new( config.glob ), false ) if config.pre_load?
     self.interval = 0.01 # yes this is a fast loop
+  end
+
+  # The number of times we see a file hasn't changed before emitting a stable
+  # count. See Configuration#stable
+  def stable_threshold
+    @config.stable
+  end
+
+  # How to sort Scan results. See Configuration.
+  #
+  def sort_by
+    @config.sort_by
+  end
+
+  # How to order Scan results. See Configuration.
+  #
+  def order_by
+    @config.order_by
+  end
+
+  # The queue from which to read items from the scanners. See Configuration.
+  #
+  def collection_queue
+    @config.collection_queue
+  end
+
+  # The queue to write Events for the Notifier. See Configuration.
+  #
+  def notification_queue
+    @config.notification_queue
   end
 
   # Given the scan, update the set of stats with the results from the Scan and
@@ -42,7 +71,7 @@ class DirectoryWatcher::Collector
   #
   def on_scan( scan, emit_events = true )
     seen_paths = Set.new
-    logger.debug "Sorting by #{@sort_by} #{@order_by}"
+    logger.debug "Sorting by #{sort_by} #{order_by}"
     sorted_stats( scan.run ).each do |stat|
       on_stat(stat, emit_events)
       seen_paths << stat.path
@@ -69,7 +98,7 @@ class DirectoryWatcher::Collector
   #
   # Returns nothing
   def run
-    case thing = @collection_queue.deq
+    case thing = collection_queue.deq
     when ::DirectoryWatcher::Scan
       on_scan(thing)
     when ::DirectoryWatcher::FileStat
@@ -105,8 +134,8 @@ class DirectoryWatcher::Collector
   # Sort the stats by +sort_by+ and +order_by+ returning the results
   #
   def sorted_stats( stats )
-    sorted = stats.sort_by{ |stat| stat.send(@sort_by) }
-    sorted = sorted.reverse if @order_by == :descending
+    sorted = stats.sort_by{ |stat| stat.send(sort_by) }
+    sorted = sorted.reverse if order_by == :descending
     return sorted
   end
 
@@ -141,7 +170,7 @@ class DirectoryWatcher::Collector
   # Returns nothing
   def emit_event_for( old_stat, new_stat )
     event = DirectoryWatcher::Event.from_stats( old_stat, new_stat )
-    @notification_queue.enq event if should_emit?(event)
+    notification_queue.enq event if should_emit?(event)
   end
 
   # Should the event given actually be emitted.
@@ -159,10 +188,10 @@ class DirectoryWatcher::Collector
   # Returns whether or not to emit the event based upon its stability
   def should_emit?( event )
     return true unless event.stable?
-    if @stable_threshold then
+    if stable_threshold then
       @stable_counts[event.path] += 1
-      logger.debug "stable_counts: #{@stable_counts[event.path]} threshold: #{@stable_threshold}"
-      if @stable_counts[event.path] >= @stable_threshold then
+      logger.debug "stable_counts: #{@stable_counts[event.path]} threshold: #{stable_threshold}"
+      if @stable_counts[event.path] >= stable_threshold then
         @stable_counts[event.path] = 0
         return true
       end

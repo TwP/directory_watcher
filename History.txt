@@ -1,3 +1,13 @@
+== Next Version / 2011-XX-XX
+
+Major Enhancements
+- tests!
+- major refactor
+
+Minor Enhancement
+- events generated from full scans may be sorted by mtime or size
+- stat information is propagated into the event
+
 == 1.4.1 / 2011-08-29
 
 Minor Enhancements

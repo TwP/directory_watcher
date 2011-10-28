@@ -11,6 +11,7 @@ class DirectoryWatcher::Event
 
   attr_reader :type
   attr_reader :path
+  attr_reader :stat
 
   # Create one of the 4 types of events given the two stats
   #
@@ -23,19 +24,20 @@ class DirectoryWatcher::Event
   #
   def self.from_stats( old_stat, new_stat )
     if old_stat != new_stat then
-      return DirectoryWatcher::Event.new( :removed,  new_stat.path ) if new_stat.removed?
-      return DirectoryWatcher::Event.new( :added,    new_stat.path ) if old_stat.nil?
-      return DirectoryWatcher::Event.new( :modified, new_stat.path )
+      return DirectoryWatcher::Event.new( :removed,  new_stat.path           ) if new_stat.removed?
+      return DirectoryWatcher::Event.new( :added,    new_stat.path, new_stat ) if old_stat.nil?
+      return DirectoryWatcher::Event.new( :modified, new_stat.path, new_stat )
     else
-      return DirectoryWatcher::Event.new( :stable, new_stat.path   )
+      return DirectoryWatcher::Event.new( :stable, new_stat.path, new_stat   )
     end
   end
 
   # Create a new Event with one of the 4 types and the path of the file.
   #
-  def initialize( type, path )
+  def initialize( type, path, stat = nil )
     @type = type
     @path = path
+    @stat = stat
   end
 
   # Is the event a modified event.

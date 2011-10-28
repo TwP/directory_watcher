@@ -168,6 +168,21 @@ require 'yaml'
 #    dw.run_once
 #    dw.persist!    # stores state to dw_state.yml
 #
+# === Ordering of Events
+#
+# In the case, particularly in the initial scan, or in cases where the Scanner
+# may be doing a large pass over the monitored locations, many events may be
+# generated all at once. In the default case, these will be emitted in the order
+# in which they are observed, which tends to be alphabetical, but it not
+# guaranteed. If you wish the events to be orderd by modified time, or file size
+# this may be done by setting the +sort_by+ and/or the +order_by+ options.
+#
+#    dw = DirectoryWatcher.new '.', :glob => '**/*.rb', :sort_by => :mtime
+#    dw.add_observer {|*args| args.each {|event| puts event}}
+#    dw.start
+#    gets      # when the user hits "enter" the script will terminate
+#    dw.stop
+#
 # === Scanning Strategies
 #
 # By default DirectoryWatcher uses a thread that scans the directory being

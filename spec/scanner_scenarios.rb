@@ -33,7 +33,6 @@ shared_examples_for "Scanner" do
       scenario.events.should be_events_like( [[ :added, 'modified'], [ :modified, 'modified']] )
     end
 
-
     it "sends removed events" do
       removed_file = scratch_path( 'removed' )
       scenario.run_and_wait_for_event_count(1) do
@@ -154,6 +153,66 @@ shared_examples_for "Scanner" do
       end.stop
 
       scenario_with_persist.events.should be_events_like( [[:added, 'persist.yml'], [ :modified, 'modified' ]] )
+    end
+  end
+
+  context "sorting" do
+    [:ascending, :descending].each do |ordering|
+      context "#{ordering}" do
+        context "file name" do
+          let( :filenames ) { ('a'..'z').sort_by {rand} }
+          let( :options   ) { default_options.merge( :order_by => ordering ) }
+          before do
+            filenames.each do |p|
+              touch( scratch_path( p ))
+            end
+          end
+
+          it "#{ordering}" do
+            scenario.run_and_wait_for_event_count(filenames.size) do
+              # wait
+            end
+            final_events = filenames.sort.map { |p| [:added, p] }
+            final_events.reverse! if ordering == :descending
+            scenario.events.should be_events_like( final_events )
+          end
+        end
+
+        context "mtime" do
+          let( :filenames ) { ('a'..'z').to_a.inject({}) { |h,k| h[k] = Time.now - (rand 5000); h } }
+          let( :options   ) { default_options.merge( :sort_by => :mtime, :order_by => ordering ) }
+          before do
+            filenames.keys.sort_by{ rand }.each do |p|
+              touch( scratch_path(p), filenames[p] )
+            end
+          end
+
+          it "#{ordering}" do
+            scenario.run_and_wait_for_event_count(filenames.size) { nil }
+            sorted_fnames = filenames.to_a.sort_by { |v| v[1] }
+            final_events = sorted_fnames.map { |fn,ts| [:added, fn] }
+            final_events.reverse! if ordering == :descending
+            scenario.events.should be_events_like( final_events )
+          end
+        end
+
+        context "size" do
+          let( :filenames ) { ('a'..'z').to_a.inject({}) { |h,k| h[k] = rand 1000; h } }
+          let( :options   ) { default_options.merge( :sort_by => :size, :order_by => ordering ) }
+          before do
+            filenames.keys.sort_by{ rand }.each do |p|
+              append_to( scratch_path(p), filenames[p] )
+            end
+          end
+          it "#{ordering}" do
+            scenario.run_and_wait_for_event_count(filenames.size) { nil }
+            sorted_fnames = filenames.to_a.sort_by { |v| v[1] }
+            final_events = sorted_fnames.map { |fn,ts| [:added, fn] }
+            final_events.reverse! if ordering == :descending
+            scenario.events.should be_events_like( final_events )
+          end
+        end
+      end
     end
   end
 end

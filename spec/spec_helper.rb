@@ -21,8 +21,8 @@ module DirectoryWatcherSpecs::Helpers
     %x[ touch -m -t #{stamp} #{fname} ]
   end
 
-  def append_to( fname )
-    File.open( fname, "a" ) { |f| f.puts Time.now }
+  def append_to( fname, count = 1 )
+    File.open( fname, "a" ) { |f| count.times { f.puts Time.now }}
   end
 end
 

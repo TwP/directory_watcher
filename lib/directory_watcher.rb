@@ -268,6 +268,15 @@ class DirectoryWatcher
   #                            stopped and started (respectively)
   #    :scanner   =>  nil      the directory scanning strategy to use with
   #                            the directory watcher (either :coolio, :em, :rev or nil)
+  #    :sort_by   =>  :path    the sort order of the scans, when there are
+  #                            multiple events ready for deliver. This can be
+  #                            one of:
+  #
+  #                               :path  => default, order by file name
+  #                               :mtime => order by last modified time
+  #                               :size  => order by file size
+  #   :order_by   => :ascending The direction in which the sorted items are
+  #                             sorted. Either :ascending or :descending
   #
   # The default glob pattern will scan all files in the configured directory.
   # Setting the :stable option to +nil+ will prevent stable events from being
@@ -286,13 +295,17 @@ class DirectoryWatcher
 
     @preloading = opts.delete(:pre_load)
     @scanner_class = scanner_class(opts.delete(:scanner))
+    @sort_by = opts.delete(:sort_by) || :path
+    @order_by = opts.delete(:order_by) || :ascending
 
     opts.each do |key, val|
       self.send( "#{key}=", val )
     end
 
+    collector_opts = { :stable => opts[:stable],
+                       :sort_by => @sort_by,
+                       :order_by => @order_by }
 
-    collector_opts = { :stable => opts[:stable] }
     collector_opts[:pre_load_scan] = Scan.new( glob ) if preloading?
     @collector = Collector.new(@event_queue, @collection_queue, collector_opts )
     @scanner = @scanner_class.new( glob, interval, @collection_queue )

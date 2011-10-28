@@ -30,7 +30,6 @@ describe "Scanners" do
       let( :scenario_with_glob     ) { DirectoryWatcherSpecs::Scenario.new( directory_watcher_with_glob     ) }
       let( :scenario_with_persist  ) { DirectoryWatcherSpecs::Scenario.new( directory_watcher_with_persist  ) }
 
-
       it_should_behave_like 'Scanner'
     end
   end

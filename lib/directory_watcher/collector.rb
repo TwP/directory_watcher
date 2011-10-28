@@ -23,6 +23,8 @@ class DirectoryWatcher::Collector
     @stats = Hash.new
     @stable_threshold = options[:stable]
     @stable_counts = Hash.new(0)
+    @sort_by = options[:sort_by]
+    @order_by = options[:order_by]
     on_scan( options.fetch(:pre_load_scan, DirectoryWatcher::Scan.new ), false )
     self.interval = 0.01 # yes this is a fast loop
   end
@@ -40,7 +42,8 @@ class DirectoryWatcher::Collector
   #
   def on_scan( scan, emit_events = true )
     seen_paths = Set.new
-    scan.run.each do |stat|
+    logger.debug "Sorting by #{@sort_by} #{@order_by}"
+    sorted_stats( scan.run ).each do |stat|
       on_stat(stat, emit_events)
       seen_paths << stat.path
     end
@@ -56,6 +59,7 @@ class DirectoryWatcher::Collector
   # Returns nothing
   def on_stat( stat, emit_event = true )
     orig_stat = update_stat( stat )
+    logger.debug "Emitting event for #{stat}"
     emit_event_for( orig_stat, stat ) if emit_event
   end
 
@@ -98,6 +102,13 @@ class DirectoryWatcher::Collector
   private
   #######
 
+  # Sort the stats by +sort_by+ and +order_by+ returning the results
+  #
+  def sorted_stats( stats )
+    sorted = stats.sort_by{ |stat| stat.send(@sort_by) }
+    sorted = sorted.reverse if @order_by == :descending
+    return sorted
+  end
 
   # Update the stats Hash with the new_stat information, return the old data
   # that is being replaced.
@@ -129,8 +140,6 @@ class DirectoryWatcher::Collector
   #
   # Returns nothing
   def emit_event_for( old_stat, new_stat )
-    logger.debug "old_stat: #{old_stat}"
-    logger.debug "new_stat: #{new_stat}"
     event = DirectoryWatcher::Event.from_stats( old_stat, new_stat )
     @notification_queue.enq event if should_emit?(event)
   end

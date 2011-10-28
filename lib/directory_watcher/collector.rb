@@ -11,7 +11,7 @@ class DirectoryWatcher::Collector
   # configuration - The Collector uses from Configuration:
   #   collection_queue   - The Queue to read items from the Scanner on
   #   notification_queue - The Queue to submit the Events to the Notifier on
-  #   stable             - The number of times we see a file hasn't changed before 
+  #   stable             - The number of times we see a file hasn't changed before
   #                        emitting a stable event
   #   sort_by            - the method used to sort events during on_scan results
   #   order_by           - The method used to order events from call to on_scan

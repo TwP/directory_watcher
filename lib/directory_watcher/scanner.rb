@@ -19,7 +19,7 @@ class DirectoryWatcher::Scanner
   # collection_queue - The Queue to send the Scans too.
   #                    the other end of this queue is connected to a Collector
   #
-  # The Scanner is not generally used out side of a DirectoryWatcher so this is 
+  # The Scanner is not generally used out side of a DirectoryWatcher so this is
   # more of an internal API
   #
   #def initialize( glob, interval, collection_queue )

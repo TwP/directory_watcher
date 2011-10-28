@@ -71,7 +71,7 @@ class DirectoryWatcher::Configuration
   #
   #   :path   => The default, they will be sorted by full pathname
   #   :mtime  => Last modified time. They will be sorted by their FileStat mtime
-  #   :size   => The number of bytes in the file. 
+  #   :size   => The number of bytes in the file.
   #
   attr_accessor :sort_by
 
@@ -116,7 +116,7 @@ class DirectoryWatcher::Configuration
     @sort_by  = o[:sort_by]
     @order_by = o[:order_by]
 
-    # These have validation rules 
+    # These have validation rules
     self.persist = o[:persist]
     self.interval = o[:interval]
     self.glob = o[:glob]

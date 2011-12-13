@@ -40,7 +40,7 @@ module DirectoryWatcherSpecs::Helpers
   # NOTE : touch will only work on *nix/BSD style systems
   # Touch the file with the given timestamp
   def touch( fname, time = Time.now )
-    stamp = time.strftime("%Y%m%d%H%M.%S")
+    stamp = time.strftime('%Y%m%d%H%M.%S')
     %x[ touch -m -t #{stamp} #{fname} ]
   end
 
@@ -53,15 +53,17 @@ module DirectoryWatcherSpecs::Helpers
   end
 
   def default_options
-    { glob: "**/*", interval: 0.05 }
+    { glob: '**/*', interval: 0.05 }
   end
 
 end
 
 RSpec.configure do |config|
+
   config.before(:each) do
-    @spec_dir = DirectoryWatcher.sub_path( "spec" )
-    @scratch_dir = File.join(@spec_dir, "scratch")
+    @spec_dir = DirectoryWatcher.sub_path('spec')
+    @scratch_dir = File.join(@spec_dir, 'scratch')
+
     FileUtils.rm_rf @scratch_dir if File.directory?( @scratch_dir )
     FileUtils.mkdir @scratch_dir unless File.directory?( @scratch_dir )
   end

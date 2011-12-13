@@ -1,29 +1,5 @@
 shared_examples_for "Scanner" do
 
-  context "Event Types"do
-    it "sends stable events" do
-      stable_file = scratch_path( 'stable' )
-      scenario_with_stable.run_and_wait_for_event_count(2) do |s|
-        touch( stable_file )
-        # do nothing wait for the stable event.
-      end.stop
-
-      scenario_with_stable.events.should be_events_like( [[:added, 'stable'], [:stable, 'stable']] )
-    end
-  end
-
-  context "pre_load option " do
-    it "skips initial add events" do
-      modified_file = scratch_path( 'modified' )
-      touch( modified_file, Time.now - 5 )
-
-      scenario_with_pre_load.run_and_wait_for_event_count(1) do
-        touch( modified_file )
-      end.stop
-
-      scenario_with_pre_load.events.should be_events_like( [[ :modified, 'modified']] )
-    end
-  end
 
   context "globbing" do
     it "only sends events for files that match" do

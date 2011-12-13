@@ -10,8 +10,8 @@ shared_examples_for "Scanner" do
     end
 
     it "sends modified events for file size modifications" do
-
       modified_file = scratch_path( 'modified' )
+
       scenario.run_and_wait_for_event_count(1) do
         touch( modified_file )
       end.run_and_wait_for_event_count(1) do
@@ -35,13 +35,14 @@ shared_examples_for "Scanner" do
 
     it "sends removed events" do
       removed_file = scratch_path( 'removed' )
+
       scenario.run_and_wait_for_event_count(1) do
         touch( removed_file, Time.now )
       end.run_and_wait_for_event_count(1) do
         File.unlink( removed_file )
       end.stop
 
-      scenario.events.should be_events_like [ [:added, 'removed'], [:removed, 'removed'] ]
+      scenario.events.should be_events_like( [[:added, 'removed'], [:removed, 'removed']] )
     end
 
     it "sends stable events" do
@@ -51,7 +52,7 @@ shared_examples_for "Scanner" do
         # do nothing wait for the stable event.
       end.stop
 
-      scenario_with_stable.events.should be_events_like [ [:added, 'stable'], [:stable, 'stable'] ]
+      scenario_with_stable.events.should be_events_like( [[:added, 'stable'], [:stable, 'stable']] )
     end
 
     it "events are not sent for directory creation" do
@@ -73,17 +74,19 @@ shared_examples_for "Scanner" do
         touch( subfile )
       end.stop
 
-      scenario.events.should be_events_like [ [:added, 'subfile'] ]
+      scenario.events.should be_events_like( [[:added, 'subfile']] )
     end
   end
 
   context "run_once" do
     it "can be run on command via 'run_once'" do
       one_shot_file = scratch_path( "run_once" )
+
       scenario.run_once_and_wait_for_event_count(1) do
         touch( one_shot_file )
       end.stop
-      scenario.events.should be_events_like [ [:added, 'run_once'] ]
+
+      scenario.events.should be_events_like( [[:added, 'run_once']] )
     end
   end
 

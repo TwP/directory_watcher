@@ -51,6 +51,11 @@ module DirectoryWatcherSpecs::Helpers
   def unique_sequence(no_of_values = 1000)
     UniqueSequenceEnumerator.new(no_of_values)
   end
+
+  def default_options
+    { glob: "**/*", interval: 0.05 }
+  end
+
 end
 
 RSpec.configure do |config|

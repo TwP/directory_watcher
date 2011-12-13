@@ -9,12 +9,11 @@ describe DirectoryWatcher do
   context 'refactor' do
     [ nil, :em, :coolio ].each do |scanner|
 
-      let( :default_options       ) { { :glob => "**/*", :interval => 0.05}                      }
-      let( :options               ) { default_options.merge( :scanner => scanner )               }
+      let(:options) { default_options.merge(scanner: scanner) }
 
       context 'DirectoryWatcher#running?' do
 
-        subject { DirectoryWatcher.new( @scratch_dir, options ) }
+        subject { DirectoryWatcher.new(@scratch_dir, options) }
 
         it 'is true when the watcher is running' do
           subject.start
@@ -125,8 +124,8 @@ describe DirectoryWatcher do
           let( :unique_values ) { unique_sequence }
 
           context 'file name' do
-            let( :filenames ) { ('a'..'z').sort_by {rand} }
-            let( :options   ) { default_options.merge(order_by: ordering) }
+            let(:filenames) { ('a'..'z').sort_by {rand} }
+            let(:options) { default_options.merge(order_by: ordering) }
 
             before do
               filenames.each do |p|
@@ -145,9 +144,10 @@ describe DirectoryWatcher do
           end
 
           context 'mtime' do
-            let( :current_time ) { Time.now }
-            let( :filenames    ) { ('a'..'z').to_a.inject({}) { |h,k| h[k] = current_time - unique_values.next; h } }
-            let( :options      ) { default_options.merge(sort_by: :mtime, order_by: ordering ) }
+
+            let(:current_time) { Time.now }
+            let(:filenames) { ('a'..'z').to_a.inject({}) { |h,k| h[k] = current_time - unique_values.next; h } }
+            let(:options) { default_options.merge(sort_by: :mtime, order_by: ordering ) }
 
             before do
               filenames.keys.sort_by{ rand }.each do |p|
@@ -165,8 +165,8 @@ describe DirectoryWatcher do
           end
 
           context 'size' do
-            let( :filenames ) { ('a'..'z').to_a.inject({}) { |h,k| h[k] = unique_values.next; h } }
-            let( :options   ) { default_options.merge( :sort_by => :size, :order_by => ordering ) }
+            let(:filenames) { ('a'..'z').to_a.inject({}) { |h,k| h[k] = unique_values.next; h } }
+            let(:options) { default_options.merge( :sort_by => :size, :order_by => ordering ) }
 
             before do
               filenames.keys.sort_by{ rand }.each do |p|

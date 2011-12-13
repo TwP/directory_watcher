@@ -4,8 +4,6 @@ describe DirectoryWatcher do
   context 'refactor' do
     [ nil, :em, :coolio ].each do |scanner|
 
-      let(:default_options) { { :glob => "**/*", :interval => 0.05} }
-
       subject {
         options = default_options.merge(scanner: scanner, pre_load: true)
         watcher = DirectoryWatcher.new(@scratch_dir, options)

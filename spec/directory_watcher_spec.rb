@@ -16,24 +16,27 @@ describe DirectoryWatcher do
 
         subject { DirectoryWatcher.new( @scratch_dir, options ) }
 
-        it "is true when the watcher is running" do
+        it 'is true when the watcher is running' do
           subject.start
           subject.running?.should be_true
+
           subject.stop
         end
 
-        it "is false when the watcher is not running" do
+        it 'is false when the watcher is not running' do
           subject.running?.should be_false
+
           subject.start
           subject.running?.should be_true
+
           subject.stop
           subject.running?.should be_false
         end
       end
 
       subject {
-        directory_watcher = DirectoryWatcher.new( @scratch_dir, options )
-        DirectoryWatcherSpecs::Scenario.new( directory_watcher)
+        watcher = DirectoryWatcher.new(@scratch_dir, options)
+        DirectoryWatcherSpecs::Scenario.new(watcher)
       }
 
       context 'Event Types' do
@@ -104,9 +107,9 @@ describe DirectoryWatcher do
         end
       end
 
-      context "run_once" do
+      context 'run_once' do
         it "can be run on command via 'run_once'" do
-          one_shot_file = scratch_path( "run_once" )
+          one_shot_file = scratch_path('run_once')
 
           subject.run_once_and_wait_for_event_count(1) do
             touch( one_shot_file )
@@ -116,69 +119,73 @@ describe DirectoryWatcher do
         end
       end
 
-      context "sorting" do
+      context 'sorting' do
         [:ascending, :descending].each do |ordering|
-          context "#{ordering}" do
 
-            let( :unique_values ) { unique_sequence }
+          let( :unique_values ) { unique_sequence }
 
-            context "file name" do
-              let( :filenames ) { ('a'..'z').sort_by {rand} }
-              let( :options   ) { default_options.merge( :order_by => ordering ) }
-              before do
-                filenames.each do |p|
-                  touch( scratch_path( p ))
-                end
-              end
+          context 'file name' do
+            let( :filenames ) { ('a'..'z').sort_by {rand} }
+            let( :options   ) { default_options.merge(order_by: ordering) }
 
-              it "#{ordering}" do
-                subject.run_and_wait_for_event_count(filenames.size) do
-                  # wait
-                end
-                final_events = filenames.sort.map { |p| [:added, p] }
-                final_events.reverse! if ordering == :descending
-                subject.events.should be_events_like( final_events )
+            before do
+              filenames.each do |p|
+                touch( scratch_path( p ))
               end
             end
 
-            context "mtime" do
-              let( :current_time ) { Time.now }
-              let( :filenames    ) { ('a'..'z').to_a.inject({}) { |h,k| h[k] = current_time - unique_values.next; h } }
-              let( :options      ) { default_options.merge( :sort_by => :mtime, :order_by => ordering ) }
-              before do
-                filenames.keys.sort_by{ rand }.each do |p|
-                  touch( scratch_path(p), filenames[p] )
-                end
+            it "#{ordering}" do
+              subject.run_and_wait_for_event_count(filenames.size) do
+                # wait
               end
+              final_events = filenames.sort.map { |p| [:added, p] }
+              final_events.reverse! if ordering == :descending
+              subject.events.should be_events_like( final_events )
+            end
+          end
 
-              it "#{ordering}" do
-                subject.run_and_wait_for_event_count(filenames.size) { nil }
-                sorted_fnames = filenames.to_a.sort_by { |k, v| v }
-                final_events = sorted_fnames.map { |fn,ts| [:added, fn] }
-                final_events.reverse! if ordering == :descending
-                subject.events.should be_events_like( final_events )
+          context 'mtime' do
+            let( :current_time ) { Time.now }
+            let( :filenames    ) { ('a'..'z').to_a.inject({}) { |h,k| h[k] = current_time - unique_values.next; h } }
+            let( :options      ) { default_options.merge(sort_by: :mtime, order_by: ordering ) }
+
+            before do
+              filenames.keys.sort_by{ rand }.each do |p|
+                touch( scratch_path(p), filenames[p] )
               end
             end
 
-            context "size" do
-              let( :filenames ) { ('a'..'z').to_a.inject({}) { |h,k| h[k] = unique_values.next; h } }
-              let( :options   ) { default_options.merge( :sort_by => :size, :order_by => ordering ) }
-              before do
-                filenames.keys.sort_by{ rand }.each do |p|
-                  append_to( scratch_path(p), filenames[p] )
-                end
+            it "#{ordering}" do
+              subject.run_and_wait_for_event_count(filenames.size) { nil }
+              sorted_fnames = filenames.to_a.sort_by { |k, v| v }
+              final_events = sorted_fnames.map { |fn,ts| [:added, fn] }
+              final_events.reverse! if ordering == :descending
+              subject.events.should be_events_like( final_events )
+            end
+          end
+
+          context 'size' do
+            let( :filenames ) { ('a'..'z').to_a.inject({}) { |h,k| h[k] = unique_values.next; h } }
+            let( :options   ) { default_options.merge( :sort_by => :size, :order_by => ordering ) }
+
+            before do
+              filenames.keys.sort_by{ rand }.each do |p|
+                append_to( scratch_path(p), filenames[p] )
               end
-              it "#{ordering}" do
-                subject.run_and_wait_for_event_count(filenames.size) { nil }
-                sorted_fnames = filenames.to_a.sort_by { |v| v[1] }
-                final_events = sorted_fnames.map { |fn,ts| [:added, fn] }
-                final_events.reverse! if ordering == :descending
-                subject.events.should be_events_like( final_events )
-              end
+            end
+
+            it "#{ordering}" do
+              subject.run_and_wait_for_event_count(filenames.size) { nil }
+              sorted_fnames = filenames.to_a.sort_by { |k, v| v }
+              final_events = sorted_fnames.map { |fn, ts| [:added, fn] }
+              final_events.reverse! if ordering == :descending
+
+              subject.events.should be_events_like( final_events )
             end
           end
         end
       end
+
     end
 
   end

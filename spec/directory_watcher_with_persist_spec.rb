@@ -5,10 +5,11 @@ describe DirectoryWatcher do
     [ nil, :em, :coolio ].each do |scanner|
 
       let(:default_options) { { :glob => "**/*", :interval => 0.05} }
-      let(:options) { default_options.merge(scanner: scanner, persist: scratch_path('persist.yml')) }
-      
+
       subject {
+        options = default_options.merge(scanner: scanner, persist: scratch_path('persist.yml'))
         watcher = DirectoryWatcher.new(@scratch_dir, options)
+
         DirectoryWatcherSpecs::Scenario.new(watcher)
       }
 

@@ -2,11 +2,11 @@ require 'spec_helper'
 
 describe DirectoryWatcher do
 
-  it "has a version" do
+  it 'has a version' do
     DirectoryWatcher.version.should =~ /\d\.\d\.\d/
   end
 
-  [ nil, :em, :coolio ].each do |scanner|
+  scanner_types.each do |scanner|
 
     let(:options) { default_options.merge(scanner: scanner) }
 

@@ -2,7 +2,7 @@
 require 'spec_helper'
 
 describe DirectoryWatcher do
-  [ nil, :em, :coolio ].each do |scanner|
+  scanner_types.each do |scanner|
 
     let(:options) { default_options.merge(scanner: scanner) }
 

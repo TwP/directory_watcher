@@ -1,7 +1,7 @@
 require 'spec_helper'
 
 describe DirectoryWatcher do
-  [ nil, :em, :coolio ].each do |scanner|
+  scanner_types.each do |scanner|
 
     subject {
       options = default_options.merge(scanner: scanner, pre_load: true)

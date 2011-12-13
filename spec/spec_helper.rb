@@ -58,6 +58,10 @@ module DirectoryWatcherSpecs::Helpers
 
 end
 
+def scanner_types
+ [nil, :em, :coolio]
+end
+
 RSpec.configure do |config|
 
   config.before(:each) do

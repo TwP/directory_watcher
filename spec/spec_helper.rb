@@ -1,9 +1,9 @@
 require 'directory_watcher'
 require 'rspec/autorun'
-require 'scanner_scenarios'
 require 'utility_classes'
 
 require 'logging'
+
 include Logging.globally
 Logging.logger.root.appenders = Logging.appenders.stderr
 Logging.logger.root.level = :off

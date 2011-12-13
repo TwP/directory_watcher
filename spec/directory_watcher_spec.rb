@@ -183,19 +183,3 @@ describe DirectoryWatcher do
 
   end
 end
-
-describe "Scanners" do
-  [ nil, :em, :coolio ].each do |scanner|
-    context "#{scanner} Scanner" do
-
-      let( :default_options       ) { { :glob => "**/*", :interval => 0.05}                      }
-      let( :options               ) { default_options.merge( :scanner => scanner )               }
-      let( :options_with_persist  ) { options.merge( :persist => scratch_path( 'persist.yml' ) ) }
-      let( :directory_watcher_with_persist  ) { DirectoryWatcher.new( @scratch_dir, options_with_persist  ) }
-      let( :scenario_with_persist  ) { DirectoryWatcherSpecs::Scenario.new( directory_watcher_with_persist  ) }
-
-      it_should_behave_like 'Scanner'
-    end
-  end
-end
-

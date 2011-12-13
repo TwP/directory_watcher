@@ -10,6 +10,30 @@ Logging.logger.root.level = :off
 #Thread.abort_on_exception = true
 
 module DirectoryWatcherSpecs::Helpers
+
+  class UniqueSequenceEnumerator
+    def initialize(size)
+      @size, @values = size, (1..size).to_a
+      shuffle
+    end
+
+    def next
+      @values.pop
+    end
+    def size
+      @size
+    end
+
+    private
+
+    def shuffle
+      size.downto 2 do |old_index|
+        new_index = rand(old_index)
+        @values[old_index - 1], @values[new_index] = @values[new_index], @values[old_index - 1]
+      end
+    end
+  end
+
   def scratch_path( *parts )
     File.join( @scratch_dir, *parts )
   end
@@ -23,6 +47,10 @@ module DirectoryWatcherSpecs::Helpers
 
   def append_to( fname, count = 1 )
     File.open( fname, "a" ) { |f| count.times { f.puts Time.now }}
+  end
+
+  def unique_sequence(no_of_values = 1000)
+    UniqueSequenceEnumerator.new(no_of_values)
   end
 end
 

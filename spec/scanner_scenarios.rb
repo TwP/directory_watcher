@@ -159,6 +159,9 @@ shared_examples_for "Scanner" do
   context "sorting" do
     [:ascending, :descending].each do |ordering|
       context "#{ordering}" do
+
+        let( :unique_values ) { unique_sequence }
+
         context "file name" do
           let( :filenames ) { ('a'..'z').sort_by {rand} }
           let( :options   ) { default_options.merge( :order_by => ordering ) }
@@ -179,8 +182,9 @@ shared_examples_for "Scanner" do
         end
 
         context "mtime" do
-          let( :filenames ) { ('a'..'z').to_a.inject({}) { |h,k| h[k] = Time.now - (rand 5000); h } }
-          let( :options   ) { default_options.merge( :sort_by => :mtime, :order_by => ordering ) }
+          let( :current_time ) { Time.now }
+          let( :filenames    ) { ('a'..'z').to_a.inject({}) { |h,k| h[k] = current_time - unique_values.next; h } }
+          let( :options      ) { default_options.merge( :sort_by => :mtime, :order_by => ordering ) }
           before do
             filenames.keys.sort_by{ rand }.each do |p|
               touch( scratch_path(p), filenames[p] )
@@ -189,7 +193,7 @@ shared_examples_for "Scanner" do
 
           it "#{ordering}" do
             scenario.run_and_wait_for_event_count(filenames.size) { nil }
-            sorted_fnames = filenames.to_a.sort_by { |v| v[1] }
+            sorted_fnames = filenames.to_a.sort_by { |k, v| v }
             final_events = sorted_fnames.map { |fn,ts| [:added, fn] }
             final_events.reverse! if ordering == :descending
             scenario.events.should be_events_like( final_events )
@@ -197,7 +201,7 @@ shared_examples_for "Scanner" do
         end
 
         context "size" do
-          let( :filenames ) { ('a'..'z').to_a.inject({}) { |h,k| h[k] = rand 1000; h } }
+          let( :filenames ) { ('a'..'z').to_a.inject({}) { |h,k| h[k] = unique_values.next; h } }
           let( :options   ) { default_options.merge( :sort_by => :size, :order_by => ordering ) }
           before do
             filenames.keys.sort_by{ rand }.each do |p|

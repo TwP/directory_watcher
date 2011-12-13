@@ -190,13 +190,8 @@ describe "Scanners" do
 
       let( :default_options       ) { { :glob => "**/*", :interval => 0.05}                      }
       let( :options               ) { default_options.merge( :scanner => scanner )               }
-      let( :options_with_glob     ) { options.merge( :glob => '**/*.42' )                        }
       let( :options_with_persist  ) { options.merge( :persist => scratch_path( 'persist.yml' ) ) }
-
-      let( :directory_watcher_with_glob     ) { DirectoryWatcher.new( @scratch_dir, options_with_glob     ) }
       let( :directory_watcher_with_persist  ) { DirectoryWatcher.new( @scratch_dir, options_with_persist  ) }
-
-      let( :scenario_with_glob     ) { DirectoryWatcherSpecs::Scenario.new( directory_watcher_with_glob     ) }
       let( :scenario_with_persist  ) { DirectoryWatcherSpecs::Scenario.new( directory_watcher_with_persist  ) }
 
       it_should_behave_like 'Scanner'

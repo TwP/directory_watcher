@@ -95,10 +95,10 @@ class DirectoryWatcher::RevScanner < ::DirectoryWatcher::EventableScanner
     #
     def on_change
       if File.exist?(path) then
-        @scanner.on_removed( ::DirectoryWatcher::FileStat.for_removed_path(path) )
+        @scanner.on_removed(self, ::DirectoryWatcher::FileStat.for_removed_path(path))
       else
         stat = File.stat(path)
-        @scanner.on_modified( ::DirectoryWatcher::FileStat.new(path, stat.mtime, stat.size) )
+        @scanner.on_modified(self, ::DirectoryWatcher::FileStat.new(path, stat.mtime, stat.size))
       end
     end
   end

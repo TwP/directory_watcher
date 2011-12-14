@@ -1,37 +1,121 @@
 require 'spec_helper'
 
 describe DirectoryWatcher do
-  it "has a version" do
+
+  it 'has a version' do
     DirectoryWatcher.version.should =~ /\d\.\d\.\d/
   end
-end
 
-describe "Scanners" do
-  [ nil, :em, :coolio ].each do |scanner|
-#  [ :rev ].each do |scanner|
-    context "#{scanner} Scanner" do
+  scanner_types.each do |scanner|
 
-      let( :default_options       ) { { :glob => "**/*", :interval => 0.05}                      }
-      let( :options               ) { default_options.merge( :scanner => scanner )               }
-      let( :options_with_pre_load ) { options.merge( :pre_load => true )                         }
-      let( :options_with_stable   ) { options.merge( :stable => 2 )                              }
-      let( :options_with_glob     ) { options.merge( :glob => '**/*.42' )                        }
-      let( :options_with_persist  ) { options.merge( :persist => scratch_path( 'persist.yml' ) ) }
+    let(:options) { default_options.merge(scanner: scanner) }
 
-      let( :directory_watcher               ) { DirectoryWatcher.new( @scratch_dir, options ) }
-      let( :directory_watcher_with_pre_load ) { DirectoryWatcher.new( @scratch_dir, options_with_pre_load ) }
-      let( :directory_watcher_with_stable   ) { DirectoryWatcher.new( @scratch_dir, options_with_stable   ) }
-      let( :directory_watcher_with_glob     ) { DirectoryWatcher.new( @scratch_dir, options_with_glob     ) }
-      let( :directory_watcher_with_persist  ) { DirectoryWatcher.new( @scratch_dir, options_with_persist  ) }
+    context 'DirectoryWatcher#running?' do
 
-      let( :scenario               ) { DirectoryWatcherSpecs::Scenario.new( directory_watcher) }
-      let( :scenario_with_pre_load ) { DirectoryWatcherSpecs::Scenario.new( directory_watcher_with_pre_load ) }
-      let( :scenario_with_stable   ) { DirectoryWatcherSpecs::Scenario.new( directory_watcher_with_stable   ) }
-      let( :scenario_with_glob     ) { DirectoryWatcherSpecs::Scenario.new( directory_watcher_with_glob     ) }
-      let( :scenario_with_persist  ) { DirectoryWatcherSpecs::Scenario.new( directory_watcher_with_persist  ) }
+      subject { DirectoryWatcher.new(@scratch_dir, options) }
 
-      it_should_behave_like 'Scanner'
+      it 'is true when the watcher is running' do
+        subject.start
+        subject.running?.should be_true
+
+        subject.stop
+      end
+
+      it 'is false when the watcher is not running' do
+        subject.running?.should be_false
+
+        subject.start
+        subject.running?.should be_true
+
+        subject.stop
+        subject.running?.should be_false
+      end
     end
+
+    subject {
+      watcher = DirectoryWatcher.new(@scratch_dir, options)
+      DirectoryWatcherSpecs::Scenario.new(watcher)
+    }
+
+    context 'Event Types' do
+      it 'sends added events' do
+        subject.run_and_wait_for_event_count(1) do
+          touch( scratch_path( 'added' ) )
+        end.stop
+
+        subject.events.should be_events_like( [[ :added, 'added' ]] )
+      end
+
+      it 'sends modified events for file size modifications' do
+        modified_file = scratch_path( 'modified' )
+
+        subject.run_and_wait_for_event_count(1) do
+          touch( modified_file )
+        end.run_and_wait_for_event_count(1) do
+          append_to( modified_file )
+        end.stop
+
+        subject.events.should be_events_like( [[ :added, 'modified'], [ :modified, 'modified']] )
+      end
+
+      it 'sends modified events for mtime modifications' do
+        modified_file = scratch_path( 'modified' )
+
+        subject.run_and_wait_for_event_count(1) do
+          touch( modified_file, Time.now - 5 )
+        end.run_and_wait_for_event_count(1) do
+          touch( modified_file )
+        end.stop
+
+        subject.events.should be_events_like( [[ :added, 'modified'], [ :modified, 'modified']] )
+      end
+
+      it 'sends removed events' do
+        removed_file = scratch_path( 'removed' )
+
+        subject.run_and_wait_for_event_count(1) do
+          touch( removed_file, Time.now )
+        end.run_and_wait_for_event_count(1) do
+          File.unlink( removed_file )
+        end.stop
+
+        subject.events.should be_events_like( [[:added, 'removed'], [:removed, 'removed']] )
+      end
+
+      it 'events are not sent for directory creation' do
+        a_dir = scratch_path( 'subdir' )
+
+        subject.run_and_wait_for_scan_count(2) do
+          Dir.mkdir( a_dir )
+        end.stop
+
+        subject.events.should be_empty
+      end
+
+      it 'sends events for files in sub directories' do
+        a_dir = scratch_path( 'subdir' )
+
+        subject.run_and_wait_for_event_count(1) do
+          Dir.mkdir( a_dir )
+          subfile = File.join( a_dir, 'subfile' )
+          touch( subfile )
+        end.stop
+
+        subject.events.should be_events_like( [[:added, 'subfile']] )
+      end
+    end
+
+    context 'run_once' do
+      it "can be run on command via 'run_once'" do
+        one_shot_file = scratch_path('run_once')
+
+        subject.run_once_and_wait_for_event_count(1) do
+          touch( one_shot_file )
+        end.stop
+
+        subject.events.should be_events_like( [[:added, 'run_once']] )
+      end
+    end
+
   end
 end
-

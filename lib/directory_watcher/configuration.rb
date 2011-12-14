@@ -19,6 +19,11 @@ class DirectoryWatcher::Configuration
   #
   # The default is '*'
   attr_reader :glob
+  
+  # The glob of files to ignore
+  #
+  # The default is nil indicating that any file is not ignored
+  attr_reader :ignore_glob
 
   # The interval at which to do a full scan using the +glob+ to determine Events
   # to send.
@@ -96,6 +101,7 @@ class DirectoryWatcher::Configuration
     {
       :dir           => '.',
       :glob          => '*',
+      :ignore_glob   => nil,
       :interval      => 30.0,
       :stable        => nil,
       :pre_load      => false,
@@ -120,6 +126,7 @@ class DirectoryWatcher::Configuration
     self.persist = o[:persist]
     self.interval = o[:interval]
     self.glob = o[:glob]
+    self.ignore_glob = o[:ignore_glob]
     self.stable = o[:stable]
 
     @notification_queue = Queue.new
@@ -155,8 +162,10 @@ class DirectoryWatcher::Configuration
   # files. A single glob pattern can be given or an array of glob patterns.
   #
   def ignore_glob=( val )
-    @ignore_glob = expand_paths(val)
-    @ignore_glob.uniq!
+    if val
+      @ignore_glob = expand_paths(val)
+      @ignore_glob.uniq!
+    end
   end
 
   # Sets the directory scan interval. The directory will be scanned every

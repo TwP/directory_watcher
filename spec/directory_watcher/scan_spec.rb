@@ -3,12 +3,13 @@ require 'spec_helper'
 describe DirectoryWatcher::Scan do
 
   it 'should ignore file matched by ignore_glob' do
-    pending
+    scan = DirectoryWatcher::Scan.new(scratch_path('*'), [scratch_path('*.rb'), scratch_path('*.py')])
+    touch(scratch_path('file1.rb'))
+    touch(scratch_path('file2.py'))
+    touch(scratch_path('file3.txt'))
 
-    scratch_path('test/file1.rb')
-    scan = DirectoryWatcher::Scan.new('**/*.rb')
-
-    scan.run.should == ['a']
+    scan.run
+    scan.results.size.should == 1
   end
 
 end

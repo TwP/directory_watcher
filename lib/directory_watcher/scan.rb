@@ -53,6 +53,7 @@ class DirectoryWatcher::Scan
   def each( &block )
     each_glob do |glob|
       Dir.glob(glob).each do |fn|
+        next if ignored?(fn)
         if stat = file_stat( fn ) then
           yield stat if block_given?
         end
@@ -72,4 +73,14 @@ class DirectoryWatcher::Scan
     # swallow
     logger.error "Error Stating #{fn} : #{e}"
   end
+
+  private
+
+  def ignored?(path)
+    @ignore_globs.each do |glob|
+      return true if File.fnmatch(glob, path)
+    end
+    false
+  end
+
 end

@@ -25,7 +25,10 @@ class DirectoryWatcher::Scanner
   #def initialize( glob, interval, collection_queue )
   def initialize( config )
     @config = config
-    @scan_and_queue = ::DirectoryWatcher::ScanAndQueue.new( @config.glob, @config.collection_queue )
+    @scan_and_queue = ::DirectoryWatcher::ScanAndQueue.new( 
+      @config.glob,
+      @config.ignore_glob,
+      @config.collection_queue )
     self.interval = config.interval
   end
 

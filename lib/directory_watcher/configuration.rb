@@ -22,7 +22,7 @@ class DirectoryWatcher::Configuration
   
   # The glob of files to ignore
   #
-  # The default is nil indicating that any file is not ignored
+  # The default is nil indicating that every file is taken into account
   attr_reader :ignore_glob
 
   # The interval at which to do a full scan using the +glob+ to determine Events

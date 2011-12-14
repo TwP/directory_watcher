@@ -24,7 +24,7 @@ class DirectoryWatcher::Collector
     @stats = Hash.new
     @stable_counts = Hash.new(0)
     @config = config
-    on_scan( DirectoryWatcher::Scan.new( config.glob ), false ) if config.pre_load?
+    on_scan( DirectoryWatcher::Scan.new( config.glob, config.ignore_glob ), false ) if config.pre_load?
     self.interval = 0.01 # yes this is a fast loop
   end
 

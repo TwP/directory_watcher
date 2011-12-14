@@ -6,24 +6,26 @@ describe DirectoryWatcher do
     context "[#{scanner}]" do
 
       subject {
-        options = default_options.merge(scanner: scanner, glob: '**/*.42')
+        options = default_options.merge(scanner: scanner, glob: '**/*.rb', ignore_glob: '**/ignored.rb')
         watcher = DirectoryWatcher.new(@scratch_dir, options)
 
         DirectoryWatcherSpecs::Scenario.new(watcher)
       }
 
-      it 'only sends events for files that match' do
-        non_matching = scratch_path( 'no-match' )
-        matching = scratch_path( 'match.42' )
+      it 'should ignore files which are specified in ignore glob' do
+        pending
+
+        matching = scratch_path( 'matched.rb' )
+        ignored = scratch_path( 'ignored.rb' )
 
         subject.run_and_wait_for_event_count(1) do
-          touch( non_matching )
+          touch( ignored )
           touch( matching, Time.now - 5 )
         end.run_and_wait_for_event_count(1) do
           touch( matching )
         end.stop
 
-        subject.events.should be_events_like( [[ :added, 'match.42' ], [ :modified, 'match.42' ]] )
+        subject.events.should be_events_like( [[ :added, 'matched.rb' ], [ :modified, 'matched.rb' ]] )
       end
     end
 

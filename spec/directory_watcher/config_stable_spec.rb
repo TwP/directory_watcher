@@ -3,21 +3,24 @@ require 'spec_helper'
 describe DirectoryWatcher do
   scanner_types.each do |scanner|
 
-    subject {
-      options = default_options.merge(scanner: scanner, stable: 2)
-      watcher = DirectoryWatcher.new(@scratch_dir, options)
+    context "[#{scanner}]" do
 
-      DirectoryWatcherSpecs::Scenario.new(watcher)
-    }
+      subject {
+        options = default_options.merge(scanner: scanner, stable: 2)
+        watcher = DirectoryWatcher.new(@scratch_dir, options)
 
-    it 'sends stable events' do
-      stable_file = scratch_path('stable')
-      subject.run_and_wait_for_event_count(2) do |s|
-        touch( stable_file )
-        # do nothing wait for the stable event.
-      end.stop
+        DirectoryWatcherSpecs::Scenario.new(watcher)
+      }
 
-      subject.events.should be_events_like( [[:added, 'stable'], [:stable, 'stable']] )
+      it 'sends stable events' do
+        stable_file = scratch_path('stable')
+        subject.run_and_wait_for_event_count(2) do |s|
+          touch( stable_file )
+          # do nothing wait for the stable event.
+        end.stop
+
+        subject.events.should be_events_like( [[:added, 'stable'], [:stable, 'stable']] )
+      end
     end
 
   end

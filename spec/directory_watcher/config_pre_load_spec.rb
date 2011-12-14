@@ -3,22 +3,25 @@ require 'spec_helper'
 describe DirectoryWatcher do
   scanner_types.each do |scanner|
 
-    subject {
-      options = default_options.merge(scanner: scanner, pre_load: true)
-      watcher = DirectoryWatcher.new(@scratch_dir, options)
+    context "[#{scanner}]" do
 
-      DirectoryWatcherSpecs::Scenario.new(watcher)
-    }
+      subject {
+        options = default_options.merge(scanner: scanner, pre_load: true)
+        watcher = DirectoryWatcher.new(@scratch_dir, options)
 
-    it 'skips initial add events' do
-      modified_file = scratch_path( 'modified' )
-      touch( modified_file, Time.now - 5 )
+        DirectoryWatcherSpecs::Scenario.new(watcher)
+      }
 
-      subject.run_and_wait_for_event_count(1) do
-        touch( modified_file )
-      end.stop
+      it 'skips initial add events' do
+        modified_file = scratch_path( 'modified' )
+        touch( modified_file, Time.now - 5 )
 
-      subject.events.should be_events_like( [[ :modified, 'modified']] )
+        subject.run_and_wait_for_event_count(1) do
+          touch( modified_file )
+        end.stop
+
+        subject.events.should be_events_like( [[ :modified, 'modified']] )
+      end
     end
 
   end

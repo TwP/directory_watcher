@@ -30,7 +30,6 @@ module DirectoryWatcherSpecs
   #
   class Scenario
 
-    attr_reader :watcher
     def initialize( watcher )
       @watcher = watcher
       @observer = EventObserver.new

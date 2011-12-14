@@ -4,16 +4,17 @@
 # Every time scan_and_queue is called a new scan is created an sent to the
 # queue.
 class DirectoryWatcher::ScanAndQueue
-  def initialize( glob, queue )
+  def initialize(glob, ignore_glob, queue)
     @globs = glob
-    @queue =queue
+    @ignore_globs = ignore_glob
+    @queue = queue
   end
 
   # Create and run a Scan and submit it to the Queue.
   #
   # Returns the Scan that was run
   def scan_and_queue
-    scan = ::DirectoryWatcher::Scan.new( @globs )
+    scan = ::DirectoryWatcher::Scan.new(@globs, @ignore_globs)
     scan.run
     logger.debug "Scanned #{@globs} and found #{scan.run.size} items"
     scan.results.each { |s| logger.debug "#{s}" }

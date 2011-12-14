@@ -19,6 +19,11 @@ class DirectoryWatcher::Configuration
   #
   # The default is '*'
   attr_reader :glob
+  
+  # The glob of files to ignore
+  #
+  # The default is nil indicating that every file is taken into account
+  attr_reader :ignore_glob
 
   # The interval at which to do a full scan using the +glob+ to determine Events
   # to send.
@@ -96,6 +101,7 @@ class DirectoryWatcher::Configuration
     {
       :dir           => '.',
       :glob          => '*',
+      :ignore_glob   => nil,
       :interval      => 30.0,
       :stable        => nil,
       :pre_load      => false,
@@ -120,6 +126,7 @@ class DirectoryWatcher::Configuration
     self.persist = o[:persist]
     self.interval = o[:interval]
     self.glob = o[:glob]
+    self.ignore_glob = o[:ignore_glob]
     self.stable = o[:stable]
 
     @notification_queue = Queue.new
@@ -136,7 +143,7 @@ class DirectoryWatcher::Configuration
   #
   def scanner_class
     class_name = scanner.to_s.capitalize + 'Scanner'
-    klass = DirectoryWatcher.const_get( class_name ) rescue Scanner
+    klass = DirectoryWatcher.const_get( class_name ) rescue DirectoryWatcher::Scanner
   end
 
   # call-seq:
@@ -147,15 +154,18 @@ class DirectoryWatcher::Configuration
   # files. A single glob pattern can be given or an array of glob patterns.
   #
   def glob=( val )
-    glob = case val
-           when String; [File.join(@dir, val)]
-           when Array; val.flatten.map! {|g| File.join(@dir, g)}
-           else
-             raise(ArgumentError,
-                   'expecting a glob pattern or an array of glob patterns')
-           end
-    glob.uniq!
-    @glob = glob
+    @glob = expand_paths(val)
+    @glob.uniq!
+  end
+
+  # Sets the ignore glob pattern that will be used when scanning the directory for
+  # files. A single glob pattern can be given or an array of glob patterns.
+  #
+  def ignore_glob=( val )
+    if val
+      @ignore_glob = expand_paths(val)
+      @ignore_glob.uniq!
+    end
   end
 
   # Sets the directory scan interval. The directory will be scanned every
@@ -206,5 +216,20 @@ class DirectoryWatcher::Configuration
   def persist=( filename )
     @persist = filename ? filename.to_s : nil
   end
+
+  private 
+
+  def expand_paths(paths)
+    case paths
+      when String; 
+        [File.join(@dir, paths)]
+      when Array; 
+        paths.flatten.map! {|g| File.join(@dir, g)}
+      else
+        raise(ArgumentError,
+             'expecting a glob pattern or an array of glob patterns')
+    end
+  end
+
 end
 

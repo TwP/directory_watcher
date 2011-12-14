@@ -295,7 +295,7 @@ class DirectoryWatcher
   #
   def initialize( directory, opts = {} )
     @observer_peers = {}
-    @config = Configuration.new( opts.merge( :dir => directory ) )
+    @config = Configuration.new( opts.merge( dir: directory ) )
 
     setup_dir(config.dir)
 

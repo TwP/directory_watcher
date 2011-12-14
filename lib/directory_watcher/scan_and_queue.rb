@@ -6,7 +6,7 @@
 class DirectoryWatcher::ScanAndQueue
   def initialize( glob, queue )
     @globs = glob
-    @queue =queue
+    @queue = queue
   end
 
   # Create and run a Scan and submit it to the Queue.

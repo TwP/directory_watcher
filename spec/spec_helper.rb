@@ -1,4 +1,5 @@
 require 'directory_watcher'
+require 'directory_watcher/scan'
 require 'rspec/autorun'
 require 'utility_classes'
 

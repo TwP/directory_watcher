@@ -4,8 +4,9 @@
 #   results = Scan.new( globs ).run
 #
 class DirectoryWatcher::Scan
-  def initialize( globs = Array.new )
+  def initialize( globs = [], ignore_globs = [] )
     @globs = [ globs ].flatten
+    @ignore_globs = [ ignore_globs ].flatten
     @results = Array.new
   end
 

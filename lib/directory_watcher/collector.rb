@@ -196,11 +196,14 @@ class DirectoryWatcher::Collector
       if valid_for_stable_event?( event.path )then
         increment_stable_count( event.path )
         if should_emit_stable?( event.path ) then
-          mark_stable_emitted( event.path )
+          mark_as_invalid_for_stable_event( event.path )
           return true
         end
       end
       return false
+    elsif event.removed? then
+      mark_as_invalid_for_stable_event( event.path )
+      return true
     else
       mark_as_valid_for_stable_event( event.path )
       return true
@@ -228,8 +231,19 @@ class DirectoryWatcher::Collector
   #
   # Returns nothing
   def mark_as_valid_for_stable_event( path )
-    logger.debug "#{path} marked as ready for stable"
+    logger.debug "#{path} marked as valid for stable"
     @stable_counts[path] = 0
+  end
+
+  # Mark that the given path is invalid for having a stable event emitted for
+  # it.
+  #
+  # path - the path to mark
+  #
+  # Returns nothing
+  def mark_as_invalid_for_stable_event( path )
+    logger.debug "#{path} marked as invalid for stable"
+    @stable_counts.delete( path )
   end
 
   # Increment the stable count for the given path
@@ -251,13 +265,4 @@ class DirectoryWatcher::Collector
     @stable_counts[path] >= stable_threshold
   end
 
-  # Mark that the given path is having a stable event emitted for it
-  #
-  # path - the path to mark
-  #
-  # Returns nothing
-  def mark_stable_emitted( path )
-    logger.debug "#{path} marked as stable emitted"
-    @stable_counts.delete( path )
-  end
 end

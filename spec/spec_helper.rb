@@ -2,6 +2,7 @@ require 'directory_watcher'
 require 'rspec/autorun'
 require 'scanner_scenarios'
 require 'utility_classes'
+require 'set'
 
 require 'logging'
 include Logging.globally
@@ -23,6 +24,13 @@ module DirectoryWatcherSpecs::Helpers
 
   def append_to( fname, count = 1 )
     File.open( fname, "a" ) { |f| count.times { f.puts Time.now }}
+  end
+
+  # create a unique list of numbers with size 'count' and from the range
+  # 0..range
+  def unique_integer_list( count, range )
+    random = (0..range).to_a.sort_by { rand }
+    return random[0,count]
   end
 end
 

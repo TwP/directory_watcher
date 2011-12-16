@@ -179,8 +179,12 @@ shared_examples_for "Scanner" do
         end
 
         context "mtime" do
-          let( :filenames ) { ('a'..'z').to_a.inject({}) { |h,k| h[k] = Time.now - (rand 5000); h } }
-          let( :options   ) { default_options.merge( :sort_by => :mtime, :order_by => ordering ) }
+          let( :current_time ) { Time.now }
+          let( :basenames    ) { ('a'..'z').to_a }
+          let( :delta_times  ) { unique_integer_list( basenames.size, 5000 ) }
+          let( :filenames    ) { basenames.inject({}) { |h,k| h[k] = current_time - delta_times.shift; h } }
+          let( :options      ) { default_options.merge( :sort_by => :mtime, :order_by => ordering ) }
+
           before do
             filenames.keys.sort_by{ rand }.each do |p|
               touch( scratch_path(p), filenames[p] )
@@ -197,13 +201,17 @@ shared_examples_for "Scanner" do
         end
 
         context "size" do
-          let( :filenames ) { ('a'..'z').to_a.inject({}) { |h,k| h[k] = rand 1000; h } }
-          let( :options   ) { default_options.merge( :sort_by => :size, :order_by => ordering ) }
+          let( :basenames  ) { ('a'..'z').to_a }
+          let( :file_sizes ) { unique_integer_list( basenames.size, 1000 ) }
+          let( :filenames  ) { basenames.inject({}) { |h,k| h[k] = file_sizes.shift; h } }
+          let( :options    ) { default_options.merge( :sort_by => :size, :order_by => ordering ) }
+
           before do
             filenames.keys.sort_by{ rand }.each do |p|
               append_to( scratch_path(p), filenames[p] )
             end
           end
+
           it "#{ordering}" do
             scenario.run_and_wait_for_event_count(filenames.size) { nil }
             sorted_fnames = filenames.to_a.sort_by { |v| v[1] }

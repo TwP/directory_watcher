@@ -8,6 +8,7 @@ require 'logging'
 include Logging.globally
 Logging.logger.root.appenders = Logging.appenders.stderr
 Logging.logger.root.level = :off
+
 #Thread.abort_on_exception = true
 
 module DirectoryWatcherSpecs::Helpers

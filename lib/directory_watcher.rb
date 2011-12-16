@@ -239,6 +239,7 @@ require 'yaml'
 require 'directory_watcher/paths'
 require 'directory_watcher/version'
 require 'directory_watcher/configuration'
+require 'directory_watcher/logable'
 require 'directory_watcher/file_stat'
 require 'directory_watcher/scan'
 require 'directory_watcher/event'
@@ -250,6 +251,7 @@ class DirectoryWatcher
 
   extend Paths
   extend Version
+  include Logable
 
   # access the configuration of the DirectoryWatcher
   attr_reader :config
@@ -285,6 +287,10 @@ class DirectoryWatcher
   #                               :size  => order by file size
   #   :order_by   => :ascending The direction in which the sorted items are
   #                             sorted. Either :ascending or :descending
+  #   :logger     => nil      An object that responds to the debug, info, warn,
+  #                           error and fatal methods. Using the default will
+  #                           use Logging gem if it is available and then fall
+  #                           back to NullLogger
   #
   # The default glob pattern will scan all files in the configured directory.
   # Setting the :stable option to +nil+ will prevent stable events from being

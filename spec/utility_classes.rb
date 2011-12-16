@@ -3,7 +3,10 @@ module DirectoryWatcherSpecs
   # It is used by the Scenario
   class EventObserver
     attr_reader :events
-    def initialize
+    attr_reader :logger
+
+    def initialize( logger )
+      @logger = logger
       @events = []
     end
 
@@ -29,11 +32,13 @@ module DirectoryWatcherSpecs
   #  dws.events.should be_events_like( ... )
   #
   class Scenario
+    include DirectoryWatcher::Logable
 
     attr_reader :watcher
     def initialize( watcher )
       @watcher = watcher
-      @observer = EventObserver.new
+      @config = watcher.config
+      @observer = EventObserver.new( logger )
       @watcher.add_observer( @observer )
       reset
     end

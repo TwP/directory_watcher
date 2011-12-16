@@ -4,6 +4,7 @@ require 'set'
 #
 class DirectoryWatcher::Collector
   include DirectoryWatcher::Threaded
+  include DirectoryWatcher::Logable
 
   # Create a new StatCollector from the given Configuration, and an optional
   # Scan.

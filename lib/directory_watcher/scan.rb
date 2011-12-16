@@ -4,6 +4,8 @@
 #   results = Scan.new( globs ).run
 #
 class DirectoryWatcher::Scan
+  include DirectoryWatcher::Logable
+
   def initialize( globs = Array.new )
     @globs = [ globs ].flatten
     @results = Array.new
@@ -69,6 +71,6 @@ class DirectoryWatcher::Scan
     return DirectoryWatcher::FileStat.new( fn, stat.mtime, stat.size )
   rescue SystemCallError => e
     # swallow
-    logger.error "Error Stating #{fn} : #{e}"
+    $stderr.puts "Error Stating #{fn} : #{e}"
   end
 end

@@ -30,6 +30,8 @@
 #     event loop.
 #
 class DirectoryWatcher::EventableScanner
+  include DirectoryWatcher::Logable
+
   # A Hash of Watcher objects.
   attr_reader :watchers
 
@@ -75,7 +77,7 @@ class DirectoryWatcher::EventableScanner
   #
   def start
     return if running?
-    logger.debug "starting"
+    logger.debug "starting scanner"
     start_loop_with_attached_scan_timer
   end
 
@@ -83,7 +85,7 @@ class DirectoryWatcher::EventableScanner
   #
   def stop
     return unless running?
-    logger.debug "stopting"
+    logger.debug "stoping scanner"
     @stopping = true
     teardown_timer_and_watches
     @stopping = false
@@ -96,7 +98,7 @@ class DirectoryWatcher::EventableScanner
   # being sent to the collection queue
   #
   def pause
-    logger.debug "pausing"
+    logger.debug "pausing scanner"
     @paused = true
   end
 
@@ -105,7 +107,7 @@ class DirectoryWatcher::EventableScanner
   # This removes the blockage on sending items to the collection queue.
   #
   def resume
-    logger.debug "resuming"
+    logger.debug "resuming scanner"
     @paused = false
   end
 

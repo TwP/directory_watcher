@@ -90,6 +90,10 @@ class DirectoryWatcher::Configuration
   #
   attr_reader :notification_queue
 
+  # The logger through wich every one will log
+  #
+  attr_reader :logger
+
   # Return a Hash of all the default options
   #
   def self.default_options
@@ -103,6 +107,7 @@ class DirectoryWatcher::Configuration
       :scanner       => nil,
       :sort_by       => :path,
       :order_by      => :ascending,
+      :logger        => nil,
     }
   end
 
@@ -121,6 +126,7 @@ class DirectoryWatcher::Configuration
     self.interval = o[:interval]
     self.glob = o[:glob]
     self.stable = o[:stable]
+    self.logger = o[:logger]
 
     @notification_queue = Queue.new
     @collection_queue = Queue.new
@@ -166,6 +172,18 @@ class DirectoryWatcher::Configuration
     val = Float(val)
     raise ArgumentError, "interval must be greater than zero" if val <= 0
     @interval = val
+  end
+
+  # Sets the logger instance. This will be used by all classes for logging
+  #
+  def logger=( val )
+    if val then
+      if %w[ debug info warn error fatal ].all? { |meth| val.respond_to?( meth ) } then
+        @logger = val
+      end
+    else
+      @logger = ::DirectoryWatcher::Logable.default_logger
+    end
   end
 
   # Sets the number of intervals a file must remain unchanged before it is

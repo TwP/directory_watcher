@@ -48,10 +48,23 @@ RSpec::Matchers.define :be_events_like do |expected|
   end
 
   failure_message_for_should do |actual|
-    "expected #{type_and_name(actual).inspect} to be events like #{expected.inspect}"
+    s = StringIO.new
+    s.puts [ "Actual".ljust(20), "Expected".ljust(20), "Same?".ljust(20) ].join(" ")
+    s.puts [ "-" *20, "-" *20, "-"*20 ].join(" ")
+    [ actual.size, expected.size ].max.times do |x|
+      a = type_and_name( actual[x] )
+      e = expected[x]
+      r = (a == e) ? "OK" : "Differ"
+      s.puts [ a.inspect.ljust(20), e.inspect.ljust(20), r ].join(" ")
+    end
+    s.string
   end
 
   def type_and_name( actual )
-    actual.map {|e| [ e.type, File.basename( e.path ) ]}
+    if actual.kind_of?( Array ) then
+      actual.map {|e| [ e.type, File.basename( e.path ) ]}
+    else
+      [ actual.type, File.basename( actual.path ) ]
+    end
   end
 end

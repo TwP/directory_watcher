@@ -54,6 +54,16 @@ shared_examples_for "Scanner" do
       scenario_with_stable.events.should be_events_like [ [:added, 'stable'], [:stable, 'stable'] ]
     end
 
+    it "only sends stable events once" do
+      stable_file = scratch_path( 'stable' )
+      scenario_with_stable.run_and_wait_for_scan_count(5) do |s|
+        touch( stable_file )
+        # do nothing
+      end.stop
+
+      scenario_with_stable.events.size.should == 2
+    end
+
     it "events are not sent for directory creation" do
       a_dir = scratch_path( 'subdir' )
 

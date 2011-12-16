@@ -23,7 +23,7 @@ class DirectoryWatcher::Collector
   #def initialize( notification_queue, collection_queue, options = {} )
   def initialize( config )
     @stats = Hash.new
-    @stable_counts = Hash.new(0)
+    @stable_counts = Hash.new
     @config = config
     on_scan( DirectoryWatcher::Scan.new( config.glob ), false ) if config.pre_load?
     self.interval = 0.01 # yes this is a fast loop
@@ -171,7 +171,11 @@ class DirectoryWatcher::Collector
   # Returns nothing
   def emit_event_for( old_stat, new_stat )
     event = DirectoryWatcher::Event.from_stats( old_stat, new_stat )
-    notification_queue.enq event if should_emit?(event)
+    if should_emit?(event) then
+      notification_queue.enq( event )
+    else
+      logger.debug "Emitting of event cancelled"
+    end
   end
 
   # Should the event given actually be emitted.
@@ -188,15 +192,72 @@ class DirectoryWatcher::Collector
   #
   # Returns whether or not to emit the event based upon its stability
   def should_emit?( event )
-    return true unless event.stable?
-    if stable_threshold then
-      @stable_counts[event.path] += 1
-      logger.debug "stable_counts: #{@stable_counts[event.path]} threshold: #{stable_threshold}"
-      if @stable_counts[event.path] >= stable_threshold then
-        @stable_counts[event.path] = 0
-        return true
+    if event.stable? then
+      if valid_for_stable_event?( event.path )then
+        increment_stable_count( event.path )
+        if should_emit_stable?( event.path ) then
+          mark_stable_emitted( event.path )
+          return true
+        end
       end
       return false
+    else
+      mark_as_valid_for_stable_event( event.path )
+      return true
     end
+  end
+
+  # Is the given path able to have a stable event emitted for it?
+  #
+  # A stable event may only be emitted for a path that has already had an added
+  # or modified event already sent. Also, once a stable event has been emitted
+  # for a path, another stable event may not be emitted until it has been
+  # modified, or added again.
+  #
+  # path - the path of the file to check
+  #
+  # Returns whether or not the path may have a stable event emitted for it.
+  def valid_for_stable_event?( path )
+    @stable_counts.has_key?( path )
+  end
+
+  # Let it be known that the given path can now have a stable event emitted for
+  # it.
+  #
+  # path - the path to mark as ready
+  #
+  # Returns nothing
+  def mark_as_valid_for_stable_event( path )
+    logger.debug "#{path} marked as ready for stable"
+    @stable_counts[path] = 0
+  end
+
+  # Increment the stable count for the given path
+  #
+  # path - the path of the file to increment its stable count
+  #
+  # Returns nothing
+  def increment_stable_count( path )
+    @stable_counts[path] += 1
+    logger.debug "#{path} stable_counts: #{@stable_counts[path]} threshold: #{stable_threshold}"
+  end
+
+  # Is the given path ready to have a stable event emitted?
+  #
+  # path - the path to report on
+  #
+  # Returns whether to emit a stable event or not
+  def should_emit_stable?( path )
+    @stable_counts[path] >= stable_threshold
+  end
+
+  # Mark that the given path is having a stable event emitted for it
+  #
+  # path - the path to mark
+  #
+  # Returns nothing
+  def mark_stable_emitted( path )
+    logger.debug "#{path} marked as stable emitted"
+    @stable_counts.delete( path )
   end
 end

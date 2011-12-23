@@ -4,7 +4,6 @@
 #   results = Scan.new( globs ).run
 #
 class DirectoryWatcher::Scan
-  include DirectoryWatcher::Logable
 
   def initialize( globs = Array.new )
     @globs = [ globs ].flatten

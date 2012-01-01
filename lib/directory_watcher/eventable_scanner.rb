@@ -212,11 +212,14 @@ class DirectoryWatcher::EventableScanner
   end
 
   # Create and return a new Watcher instance for the given filename _fn_.
+  # A watcher will only be created once for a particular fn.
   #
   def watch_file( fn )
-    logger.debug "Watching file #{fn}"
-    w = self.class::Watcher.watch(fn, self)
-    @watchers[fn] = w
+    unless @watchers[fn] then
+      logger.debug "Watching file #{fn}"
+      w = self.class::Watcher.watch(fn, self)
+      @watchers[fn] = w
+    end
   end
 
   # Remove the watcher instance from our tracking

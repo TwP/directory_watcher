@@ -66,9 +66,15 @@ class DirectoryWatcher::Collector
   # emit_events - Should events be emitted for the events in the scan
   #               (default: true)
   #
-  # Returns nothing.
+  # There is one odd thing that happens here. Scanners that are EventableScanners
+  # use on_stat to emit removed events, and the standard threaded Scanner only
+  # uses Scans. So we make sure and only emit removed events in this method if
+  # the scanner that gave us the scan was the basic threaded Scanner.
   #
-  # NOTE: Should ordering take place here?
+  # TODO: Possibly fix this through another abstraction in the Scanners.
+  # No idea about what that would be yet.
+  #
+  # Returns nothing.
   #
   def on_scan( scan, emit_events = true )
     seen_paths = Set.new
@@ -77,7 +83,7 @@ class DirectoryWatcher::Collector
       on_stat(stat, emit_events)
       seen_paths << stat.path
     end
-    emit_removed_events(seen_paths)
+    emit_removed_events(seen_paths) if @config.scanner.nil?
   end
 
   # Process a single stat and emit an event if necessary.

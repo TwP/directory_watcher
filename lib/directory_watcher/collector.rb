@@ -194,7 +194,7 @@ class DirectoryWatcher::Collector
   # Returns whether or not to emit the event based upon its stability
   def should_emit?( event )
     if event.stable? then
-      if valid_for_stable_event?( event.path )then
+      if emitting_stable_events? and valid_for_stable_event?( event.path )then
         increment_stable_count( event.path )
         if should_emit_stable?( event.path ) then
           mark_as_invalid_for_stable_event( event.path )
@@ -265,4 +265,14 @@ class DirectoryWatcher::Collector
     @stable_counts[path] >= stable_threshold
   end
 
+  # Is it legal for us to emit stable events at all. This checks the config to
+  # see if that is the case.
+  #
+  # In the @config if the stable threshold is set then we are emitting stable
+  # events.
+  #
+  # Returns whether it is legal to propogate stable events
+  def emitting_stable_events?
+    stable_threshold
+  end
 end

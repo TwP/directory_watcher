@@ -89,7 +89,7 @@ class DirectoryWatcher::Collector
   # Returns nothing
   def on_stat( stat, emit_event = true )
     orig_stat = update_stat( stat )
-    logger.debug "Emitting event for #{stat}"
+    logger.debug "Emitting event for on_stat #{stat}"
     emit_event_for( orig_stat, stat ) if emit_event
   end
 
@@ -172,9 +172,10 @@ class DirectoryWatcher::Collector
   def emit_event_for( old_stat, new_stat )
     event = DirectoryWatcher::Event.from_stats( old_stat, new_stat )
     if should_emit?(event) then
+      logger.debug "Sending event #{event.object_id} to notifcation queue"
       notification_queue.enq( event )
     else
-      logger.debug "Emitting of event cancelled"
+      logger.debug "Emitting of event #{event.object_id} cancelled"
     end
   end
 
@@ -253,7 +254,6 @@ class DirectoryWatcher::Collector
   # Returns nothing
   def increment_stable_count( path )
     @stable_counts[path] += 1
-    logger.debug "#{path} stable_counts: #{@stable_counts[path]} threshold: #{stable_threshold}"
   end
 
   # Is the given path ready to have a stable event emitted?

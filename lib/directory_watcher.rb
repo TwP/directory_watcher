@@ -350,6 +350,7 @@ class DirectoryWatcher
       raise NoMethodError, "observer does not respond to `#{func.to_s}'"
     end
 
+    logger.debug "Added observer"
     @observer_peers[observer] = func
     observer
   end
@@ -479,7 +480,7 @@ class DirectoryWatcher
     return self if running?
 
     load!
-    logger.debug "starting notifier"
+    logger.debug "starting notifier #{@notifier.object_id}"
     @notifier.start
     Thread.pass until @notifier.running?
 
@@ -511,18 +512,18 @@ class DirectoryWatcher
   #
   # Stop returns once the scanner and notifier say they are no longer running
   def stop
-    logger.info "stop (running -> #{running?})"
+    logger.debug "stop (running -> #{running?})"
     return self unless running?
 
-    logger.info"stopping scanner"
+    logger.debug"stopping scanner"
     @scanner.stop
     Thread.pass while @scanner.running?
 
-    logger.info"stopping collector"
+    logger.debug"stopping collector"
     @collector.stop
     Thread.pass while @collector.running?
 
-    logger.info"stopping notifier"
+    logger.debug"stopping notifier"
     @notifier.stop
     Thread.pass while @notifier.running?
 

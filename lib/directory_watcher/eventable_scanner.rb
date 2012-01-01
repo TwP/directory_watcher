@@ -125,6 +125,7 @@ class DirectoryWatcher::EventableScanner
   # Do a single scan and send those items to the collection queue.
   #
   def run
+    logger.debug "running scan and queue"
     @scan_and_queue.scan_and_queue
   end
 
@@ -154,6 +155,7 @@ class DirectoryWatcher::EventableScanner
   # and notify the directory watcher accordingly.
   #
   def on_scan
+    logger.debug "on_scan called"
     scan_and_watch_files
     progress_towards_maximum_iterations
   end
@@ -162,6 +164,7 @@ class DirectoryWatcher::EventableScanner
   # loop for file modifications.
   #
   def on_modified(watcher, new_stat)
+    logger.debug "on_modified called"
     queue_item(new_stat)
   end
 
@@ -169,6 +172,7 @@ class DirectoryWatcher::EventableScanner
   # loop for file removals
   #
   def on_removed(watcher, new_stat)
+    logger.debug "on_removed called"
     unwatch_file(watcher.path)
     queue_item(new_stat)
   end
@@ -183,6 +187,7 @@ class DirectoryWatcher::EventableScanner
     if paused? then
       logger.debug "Not queueing item, we're paused"
     else
+      logger.debug "enqueuing #{item} to #{collection_queue}"
       collection_queue.enq item
     end
   end
@@ -192,6 +197,7 @@ class DirectoryWatcher::EventableScanner
   # that do not already have watchers on them.
   #
   def scan_and_watch_files
+    logger.debug "scanning and watching files"
     scan = @scan_and_queue.scan_and_queue
     scan.results.each do |stat|
       watch_file(stat.path)

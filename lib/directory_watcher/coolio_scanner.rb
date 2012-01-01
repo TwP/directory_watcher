@@ -89,10 +89,11 @@ class DirectoryWatcher::CoolioScanner < DirectoryWatcher::EventableScanner
     # EventableScanner calls.
     #
     def on_change( prev_stat, current_stat )
+      logger.debug "on_change called"
       if File.exist?(path) then
-        @scanner.on_removed(self, ::DirectoryWatcher::FileStat.for_removed_path(path))
-      else
         @scanner.on_modified(self, ::DirectoryWatcher::FileStat.new(path, current_stat.mtime, current_stat.size))
+      else
+        @scanner.on_removed(self, ::DirectoryWatcher::FileStat.for_removed_path(path))
       end
     end
   end

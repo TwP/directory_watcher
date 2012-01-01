@@ -29,7 +29,7 @@ class DirectoryWatcher::Scanner
     self.interval = config.interval
   end
 
-  # Performs exactly one scan of the directory for file changes and send the
+  # Performs exactly one scan of the directory and sends the
   # results to the Collector
   #
   def run

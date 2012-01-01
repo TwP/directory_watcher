@@ -36,13 +36,10 @@ class DirectoryWatcher::EventableScanner
   attr_reader :watchers
 
   # call-seq:
-  #    EventableScanner.new( glob, interval, collection_queue )
+  #    EventableScanner.new( config )
   #
-  # glob              - The array of globs to scan for
-  # interval          - The interval (seconds) at which to scan
-  # collection_queue  - The Queue to put items on for the Collector to process.
+  # config - the Configuration instances
   #
-  #def initialize( glob, interval, collection_queue )
   def initialize( config )
     @config = config
     @scan_and_queue = DirectoryWatcher::ScanAndQueue.new(config.glob, config.collection_queue)

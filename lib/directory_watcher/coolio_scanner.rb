@@ -19,7 +19,7 @@ if DirectoryWatcher::HAVE_COOLIO
 #
 class DirectoryWatcher::CoolioScanner < DirectoryWatcher::EventableScanner
   # call-seq:
-  #    CoolioScanner.new( glob, interval, collection_queue )
+  #    CoolioScanner.new( config )
   #
   def initialize( config )
     super(config)

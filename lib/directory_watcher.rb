@@ -445,6 +445,8 @@ class DirectoryWatcher
     return if running?
     File.open(persist, 'w') { |fd| @collector.dump_stats(fd) } if persist?
     self
+  rescue => e
+    logger.error "Failure to write to persitence file #{persist.inspect} : #{e}"
   end
 
   # Is persistence done on this DirectoryWatcher

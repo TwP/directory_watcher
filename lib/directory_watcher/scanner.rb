@@ -28,7 +28,13 @@ class DirectoryWatcher::Scanner
   def initialize( config )
     @config = config
     @scan_and_queue = ::DirectoryWatcher::ScanAndQueue.new( @config.glob, @config.collection_queue )
-    self.interval = config.interval
+  end
+
+  # Set the interval before starting the loop.
+  # This allows for interval to be set AFTER the DirectoryWatcher instance is
+  # allocated but before it is started.
+  def before_starting
+    self.interval = @config.interval
   end
 
   # Performs exactly one scan of the directory and sends the

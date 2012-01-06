@@ -9,6 +9,8 @@
 #
 class DirectoryWatcher::Scanner
   include DirectoryWatcher::Threaded
+  include DirectoryWatcher::Logable
+
   # call-seq:
   #    Scanner.new( configuration )
   #

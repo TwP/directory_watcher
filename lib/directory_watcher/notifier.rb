@@ -3,6 +3,7 @@
 #
 class DirectoryWatcher::Notifier
   include DirectoryWatcher::Threaded
+  include DirectoryWatcher::Logable
 
   # Create a new Notifier that pulls events off the given notification_queue from the
   # config, and sends them to the listed observers.

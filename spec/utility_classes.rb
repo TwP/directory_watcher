@@ -12,7 +12,7 @@ module DirectoryWatcherSpecs
 
     def update( *event_list )
       logger.debug "got event #{event_list}"
-      event_list.each { |e| @events << e }
+      @events.concat event_list
     end
   end
 

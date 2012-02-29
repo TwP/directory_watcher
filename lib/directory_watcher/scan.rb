@@ -37,7 +37,6 @@ class DirectoryWatcher::Scan
     return r
   end
 
-
   # Iterate over each glob, yielding it
   #
   def each_glob( &block )
@@ -45,7 +44,6 @@ class DirectoryWatcher::Scan
       yield glob
     end
   end
-
 
   # Iterate over each item that matches the glob.
   # The item yielded is a ::DirectoryWatcher::FileStat object.
@@ -59,7 +57,6 @@ class DirectoryWatcher::Scan
       end
     end
   end
-
 
   # Return the stat of of the file in question. If the item is not a file,
   # then return the value of the passed in +if_not_file+

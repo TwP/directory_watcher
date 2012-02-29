@@ -1,4 +1,3 @@
-require 'set'
 # Collector reads items from a collection Queue and processes them to see if
 # FileEvents should be put onto the notification Queue.
 #

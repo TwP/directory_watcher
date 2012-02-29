@@ -4,9 +4,14 @@
 # See DirectoryWatcher for detailed documentation and usage.
 #
 
-require 'observer'
+require 'set'
 require 'thread'
 require 'yaml'
+
+require 'directory_watcher/paths'
+require 'directory_watcher/version'
+require 'directory_watcher/configuration'
+require 'directory_watcher/logable'
 
 # == Synopsis
 #
@@ -236,19 +241,7 @@ require 'yaml'
 #
 # Tim Pease
 #
-require 'directory_watcher/paths'
-require 'directory_watcher/version'
-require 'directory_watcher/configuration'
-require 'directory_watcher/logable'
-require 'directory_watcher/file_stat'
-require 'directory_watcher/scan'
-require 'directory_watcher/event'
-require 'directory_watcher/threaded'
-require 'directory_watcher/collector'
-require 'directory_watcher/notifier'
-require 'directory_watcher/scan_and_queue'
 class DirectoryWatcher
-
   extend Paths
   extend Version
   include Logable
@@ -374,7 +367,7 @@ class DirectoryWatcher
     @observer_peers.size
   end
 
-   # call-seq:
+  # call-seq:
   #    glob = '*'
   #    glob = ['lib/**/*.rb', 'test/**/*.rb']
   #
@@ -384,6 +377,7 @@ class DirectoryWatcher
   def glob=( val )
     config.glob = val
   end
+
   def glob
     config.glob
   end
@@ -395,6 +389,7 @@ class DirectoryWatcher
   def interval=( val )
     config.interval = val
   end
+
   def interval
     config.interval
   end
@@ -422,6 +417,7 @@ class DirectoryWatcher
   def stable=( val )
     config.stable = val
   end
+
   def stable
     config.stable
   end
@@ -433,6 +429,7 @@ class DirectoryWatcher
   def persist=( filename )
     config.persist = filename
   end
+
   def persist
     config.persist
   end
@@ -608,12 +605,17 @@ class DirectoryWatcher
   end
 end  # class DirectoryWatcher
 
-DirectoryWatcher.lib_path {
-  require 'directory_watcher/scanner'
-  require 'directory_watcher/eventable_scanner'
-  require 'directory_watcher/coolio_scanner'
-  require 'directory_watcher/em_scanner'
-  require 'directory_watcher/rev_scanner'
-}
+require 'directory_watcher/file_stat'
+require 'directory_watcher/scan'
+require 'directory_watcher/event'
+require 'directory_watcher/threaded'
+require 'directory_watcher/collector'
+require 'directory_watcher/notifier'
+require 'directory_watcher/scan_and_queue'
+require 'directory_watcher/scanner'
+require 'directory_watcher/eventable_scanner'
+require 'directory_watcher/coolio_scanner'
+require 'directory_watcher/em_scanner'
+require 'directory_watcher/rev_scanner'
 
 # EOF

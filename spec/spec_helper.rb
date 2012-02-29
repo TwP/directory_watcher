@@ -1,13 +1,13 @@
-require 'directory_watcher'
+
+require File.expand_path('../../lib/directory_watcher', __FILE__)
+
+require 'logging'
+require 'rspec/logging_helper'
 require 'rspec/autorun'
 require 'scanner_scenarios'
 require 'utility_classes'
-require 'set'
 
-require 'logging'
 include Logging.globally
-Logging.logger.root.appenders = Logging.appenders.stderr
-Logging.logger.root.level = :off
 
 #Thread.abort_on_exception = true
 
@@ -49,31 +49,31 @@ RSpec.configure do |config|
 
   config.include DirectoryWatcherSpecs::Helpers
 
+  include RSpec::LoggingHelper
+  config.capture_log_messages
 end
 
 RSpec::Matchers.define :be_events_like do |expected|
   match do |actual|
-    type_and_name(actual) == expected
+    a = actual.kind_of?( Array ) ?
+            actual.map {|e| [ e.type, File.basename( e.path ) ]} :
+            [ actual.type, File.basename( actual.path ) ]
+    a == expected
   end
 
   failure_message_for_should do |actual|
     s = StringIO.new
     s.puts [ "Actual".ljust(20), "Expected".ljust(20), "Same?".ljust(20) ].join(" ")
-    s.puts [ "-" *20, "-" *20, "-"*20 ].join(" ")
+    s.puts [ "-"*20, "-"*20, "-"*20 ].join(" ")
     [ actual.size, expected.size ].max.times do |x|
-      a = type_and_name( actual[x] )
+      a = actual[x]
+      a = a.kind_of?( Array ) ?
+              a.map {|e| [ e.type, File.basename( e.path ) ]} :
+              [ a.type, File.basename( a.path ) ]
       e = expected[x]
       r = (a == e) ? "OK" : "Differ"
       s.puts [ a.inspect.ljust(20), e.inspect.ljust(20), r ].join(" ")
     end
     s.string
-  end
-
-  def type_and_name( actual )
-    if actual.kind_of?( Array ) then
-      actual.map {|e| [ e.type, File.basename( e.path ) ]}
-    else
-      [ actual.type, File.basename( actual.path ) ]
-    end
   end
 end

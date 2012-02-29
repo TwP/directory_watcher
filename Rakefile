@@ -5,13 +5,15 @@ rescue LoadError
   abort '### please install the "bones" gem ###'
 end
 
+task :default => 'spec:run'
+task 'gem:release' => 'spec:run'
+
 Bones {
   name         'directory_watcher'
   summary      'A class for watching files within a directory and generating events when those files change'
-  authors      'Tim Pease'
+  authors      ['Tim Pease', 'Jeremy Hinegardner']
   email        'tim.pease@gmail.com'
   url          'http://rubygems.org/gems/directory_watcher'
-  ignore_file  '.gitignore'
 
   spec.opts << "--color" << "--format documentation"
 

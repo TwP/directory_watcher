@@ -150,7 +150,7 @@ class DirectoryWatcher::Collector
   #
   def update_stat( new_stat )
     old_stat = @stats.delete(new_stat.path)
-    @stats.store(new_stat.path, new_stat)
+    @stats.store(new_stat.path, new_stat) unless new_stat.removed?
     return old_stat
   end
 

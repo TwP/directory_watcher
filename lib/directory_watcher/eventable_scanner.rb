@@ -226,7 +226,7 @@ class DirectoryWatcher::EventableScanner
   #
   def unwatch_file( fn )
     logger.debug "Unwatching file #{fn}"
-    watcher = @watchers.delete(fn)
+    @watchers.delete(fn)
   end
 
   # Make progress towards maximum iterations. And if we get there, then stop

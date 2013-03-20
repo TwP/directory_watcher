@@ -318,7 +318,6 @@ class DirectoryWatcher
     end
   end
 
-
   # call-seq:
   #    add_observer( observer, func = :update )
   #    add_observer {|*events| block}

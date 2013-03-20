@@ -142,7 +142,7 @@ class DirectoryWatcher::Configuration
   #
   def scanner_class
     class_name = scanner.to_s.capitalize + 'Scanner'
-    klass = DirectoryWatcher.const_get( class_name ) rescue DirectoryWatcher::Scanner
+    DirectoryWatcher.const_get( class_name ) rescue DirectoryWatcher::Scanner
   end
 
   # call-seq:

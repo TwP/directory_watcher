@@ -45,7 +45,7 @@ class DirectoryWatcher
     #
     def with_load_path(path, &block)
       $LOAD_PATH.unshift path
-      rv = block.call
+      block.call
     ensure
       $LOAD_PATH.shift
     end

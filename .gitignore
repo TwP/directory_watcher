@@ -12,3 +12,6 @@ tags
 temp.dir
 tmp.rb
 tmp.yml
+vendor
+script
+spec/scratch
